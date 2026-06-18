@@ -27,7 +27,10 @@ COPY buscador_vagas buscador_vagas
 COPY pyproject.toml .
 RUN pip install --no-cache-dir -e .
 
+# Pre-download botasaurus native library (hrequests-cgo .so) — bypass GitHub API rate limit
+RUN python -c "import urllib.request, os; url='https://github.com/daijro/hrequests/releases/download/v0.8.0-beta.2/hrequests-cgo-2.0-linux-amd64.so'; dest='/usr/local/lib/python3.13/site-packages/botasaurus_requests/bin/hrequests-cgo-2.0-linux-amd64.so'; os.makedirs(os.path.dirname(dest), exist_ok=True); urllib.request.urlretrieve(url, dest); print('Native lib OK:', os.path.getsize(dest), 'bytes')"
+
 ENV PYTHONPATH=/app/proxy_framework:/app/buscador_vagas
 
-WORKDIR /app/buscador_vagas
-ENTRYPOINT ["python", "buscador.py"]
+WORKDIR /app
+ENTRYPOINT ["python", "buscador_vagas/buscador.py"]

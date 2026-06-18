@@ -49,7 +49,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--threads", type=int, default=8, help="workers de teste de proxy")
     parser.add_argument("--timeout", type=float, default=12.0, help="timeout em segundos para busca/typeahead/teste")
     parser.add_argument("--detail-timeout", type=float, default=5.0, help="timeout em segundos para cada detalhe de vaga")
-    parser.add_argument("--output", help="arquivo para salvar a resposta bruta")
     parser.add_argument("--jobs-output", help="arquivo JSON para salvar as vagas extraidas")
     parser.add_argument("--details-output", help="arquivo JSON para salvar vagas com detalhes")
     parser.add_argument("--filters", help="arquivo JSON com filtros desacoplados para considerar vagas")
@@ -88,9 +87,8 @@ def main(argv: list[str] | None = None) -> int:
         threads=args.threads,
         timeout=args.timeout,
         detail_timeout=args.detail_timeout,
-        raw_output=args.output or f"output/{portal}_response.html",
-        jobs_output=args.jobs_output or f"output/vagas_{portal}.json",
-        details_output=args.details_output or f"output/vagas_{portal}_detalhadas.json",
+        jobs_output=args.jobs_output or f"output/{portal}/vagas.json",
+        details_output=args.details_output or f"output/{portal}/detalhadas.json",
         filters_path=args.filters,
         details_limit=args.details_limit,
         show_jobs=args.show_jobs,

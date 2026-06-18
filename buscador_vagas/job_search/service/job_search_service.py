@@ -21,7 +21,6 @@ class JobSearchRequest:
     threads: int
     timeout: float
     detail_timeout: float
-    raw_output: str
     jobs_output: str
     details_output: str
     filters_path: str | None
@@ -56,9 +55,6 @@ class JobSearchService:
             if result is None:
                 self.view.error("Nenhuma bridge conseguiu retornar resposta do portal.")
                 return 1
-
-            self.repository.save_raw(request.raw_output, result.response.text)
-            self.view.info(f"[bold green]Resposta salva em:[/] {request.raw_output}")
 
             if not result.jobs:
                 self.view.warn("Nenhuma vaga encontrada.")
