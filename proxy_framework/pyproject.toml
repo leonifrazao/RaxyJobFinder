@@ -16,5 +16,5 @@ dependencies = [
 [project.optional-dependencies]
 console = ["rich>=13.0.0"]
 
-[tool.setuptools.packages.find]
-include = ["proxy_framework*"]
+[tool.setuptools]
+packages = ["src"]

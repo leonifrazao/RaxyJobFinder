@@ -17,5 +17,5 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["buscador_vagas", "proxy_framework"]
-include = ["job_search*", "proxy_framework*"]
+where = ["buscador_vagas", "proxy_framework/src"]
+include = ["job_search*", "src"]

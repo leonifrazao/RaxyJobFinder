@@ -19,7 +19,7 @@ pkgs.mkShell {
   ] ++ xrayPackages;
 
   shellHook = ''
-    export PYTHONPATH="$PWD/proxy_framework:$PWD/buscador_vagas:$PYTHONPATH"
+    export PYTHONPATH="$PWD/proxy_framework/src:$PWD/buscador_vagas:$PYTHONPATH"
     export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
 
     if [ ! -d "$PWD/.venv" ]; then

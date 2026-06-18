@@ -5,7 +5,7 @@ import sys
 
 import requests
 
-from proxy_framework import create_proxy
+from src import create_proxy
 
 
 DEFAULT_SOURCE = "https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/vmess_configs.txt"

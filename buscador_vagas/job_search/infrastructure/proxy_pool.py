@@ -6,10 +6,10 @@ from pathlib import Path
 from job_search.domain.dtos import BridgeEndpoint
 
 try:
-    from proxy_framework import create_proxy
+    from src import create_proxy
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "proxy_framework"))
-    from proxy_framework import create_proxy
+    from src import create_proxy
 
 
 class ProxyFrameworkPool:

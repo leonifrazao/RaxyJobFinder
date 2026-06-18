@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from proxy_framework import create_proxy
+from src import create_proxy
 
 
 VMESS_SOURCE = "https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/vmess_configs.txt"
