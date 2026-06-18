@@ -1,0 +1,6 @@
+{
+  "not": {
+    "fields": ["title", "description"],
+    "contains": ["estagio", "estágio", "aprendiz"]
+  }
+}

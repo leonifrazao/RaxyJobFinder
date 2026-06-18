@@ -1,0 +1,12 @@
+{
+  "all": [
+    {
+      "fields": ["title", "description", "criteria"],
+      "contains": ["senior", "sênior", "pleno-sênior"]
+    },
+    {
+      "fields": ["location", "description"],
+      "contains": ["remoto", "remote"]
+    }
+  ]
+}

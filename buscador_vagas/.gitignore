@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.venv/
+linkedin_response.html
+proxy_cache.json
+output/
+error_logs/

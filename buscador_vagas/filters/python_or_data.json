@@ -1,0 +1,12 @@
+{
+  "any": [
+    {
+      "fields": ["title", "description"],
+      "contains": "python"
+    },
+    {
+      "fields": ["title", "description"],
+      "contains": ["dados", "data", "analytics"]
+    }
+  ]
+}

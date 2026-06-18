@@ -1,0 +1,4 @@
+{
+  "fields": ["title", "description"],
+  "contains": "python"
+}

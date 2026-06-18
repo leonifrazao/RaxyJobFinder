@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proxy-framework"
+version = "0.1.0"
+description = "Framework independente para parsing, teste e bridge HTTP de proxies Xray/V2Ray."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "urllib3>=2.0.0",
+]
+
+[project.optional-dependencies]
+console = ["rich>=13.0.0"]
+
+[tool.setuptools.packages.find]
+include = ["proxy_framework*"]

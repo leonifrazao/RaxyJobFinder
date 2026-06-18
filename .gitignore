@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+.venv/
+proxy_cache.json
+output/
+error_logs/
+*.html
