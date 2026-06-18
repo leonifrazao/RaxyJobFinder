@@ -107,6 +107,8 @@ class Proxy(ProxyService):
         if self.use_cache and not self._entries and self._outbounds:
             self._prime_entries_from_cache()
 
+        self.process.which_xray()
+
     @property
     def entries(self) -> List[ProxyItem]:
         return self._entries
