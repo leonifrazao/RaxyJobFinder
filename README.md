@@ -55,6 +55,132 @@ python buscador_vagas/buscador.py --keywords "Python" --location "São Paulo"
 
 ---
 
+## SDK Python (Programático)
+
+Além da CLI, o Raxy oferece um SDK para uso diretamente em código Python. Importe `JobFinder` e obtenha os resultados como objetos tipados.
+
+### Instalação
+
+```bash
+pip install -e .  # ou pip install buscador_vagas/
+```
+
+### Uso básico
+
+```python
+from buscador_vagas import JobFinder
+
+finder = JobFinder(portal="linkedin", keywords="Python", location="São Paulo")
+jobs = finder.search()
+
+for job in jobs:
+    print(job.summary.title, job.summary.company)
+```
+
+### Com filtro por arquivo JSON
+
+```python
+finder = JobFinder(
+    portal="linkedin",
+    keywords="Python",
+    filters="filters/python.json",
+)
+jobs = finder.search()
+```
+
+### Com filtro programático
+
+```python
+from buscador_vagas import JobFinder, JobFilterSet
+
+filtro = JobFilterSet.from_dict({
+    "all": [
+        {"fields": ["title"], "contains": "Python"},
+        {"fields": ["criteria.Tipo"], "in": ["Remoto", "Híbrido"]},
+    ]
+})
+
+finder = JobFinder(filters=filtro)
+jobs = finder.search()
+```
+
+### Filtro por chamada (sobrescreve o do construtor)
+
+```python
+finder = JobFinder()
+
+# só nesta busca aplica o filtro
+jobs = finder.search(filters=filtro)
+
+# próxima busca volta ao comportamento padrão (sem filtro)
+jobs2 = finder.search()
+```
+
+### Proxy, paginação e detalhes
+
+```python
+finder = JobFinder(
+    portal="gupy",
+    keywords="Data Science",
+    location="Rio de Janeiro",
+    proxy_provider="brazil",          # proxies brasileiros
+    proxy_sources=["https://meu-proxy.txt"],  # ou lista manual
+    valid_count=25,                   # pool de bridges
+    jobs_per_proxy=3,                 # rotaciona a cada 3 detalhes
+    max_jobs=120,                     # paginação: até 120 vagas
+    detail_threads=10,                # 10 threads para detalhes
+    details_limit=20,                 # detalha só as 20 primeiras
+    timeout=15.0,                     # timeout do proxy
+    detail_timeout=8.0,               # timeout do detalhe
+    silent=True,                      # sem output no terminal
+)
+
+jobs = finder.search(
+    jobs_output="resultados/vagas.json",
+    details_output="resultados/detalhadas.json",
+)
+```
+
+### Tipos retornados
+
+`search()` retorna `list[JobPosting]`, onde cada `JobPosting` contém:
+
+| Atributo | Tipo | Descrição |
+|---|---|---|
+| `summary` | `JobSummary` | Dados básicos da vaga (título, empresa, local, URL) |
+| `details` | `JobDetails \| None` | Descrição completa, critérios, texto de candidatura |
+| `detail_error` | `str` | Mensagem de erro se o detalhamento falhou |
+
+Use `job.to_dict()` para serializar em dicionário (útil para JSON).
+
+### Todos os parâmetros do construtor
+
+| Parâmetro | Padrão | Descrição |
+|---|---|---|
+| `portal` | `"linkedin"` | `linkedin`, `gupy` ou `glassdoor` |
+| `keywords` | `"Vagas"` | Termo de busca |
+| `location` | `"Brasil"` | Localização |
+| `location_id` | `None` | ID da localização (pula typeahead) |
+| `location_choice` | `None` | Índice 1-based no typeahead |
+| `proxy_sources` | `None` | Lista de URLs/arquivos de proxy |
+| `proxy_provider` | `"all"` | `brazil`, `united-states`, `canada`, etc. |
+| `valid_count` | `25` | Bridges no pool |
+| `jobs_per_proxy` | `5` | Vagas por proxy antes de rotacionar |
+| `max_count` | `177` | Máximo de configs de proxy a carregar |
+| `threads` | `8` | Workers para testar proxies |
+| `timeout` | `12.0` | Timeout do proxy (segundos) |
+| `detail_timeout` | `5.0` | Timeout do detalhe (segundos) |
+| `filters` | `None` | `JobFilterSet`, caminho de arquivo, ou `None` |
+| `filters_path` | `None` | Caminho do arquivo de filtro (alternativo) |
+| `details_limit` | `0` | Máx. de vagas para detalhar (`0` = todas) |
+| `start` | `0` | Offset da paginação |
+| `max_jobs` | `0` | Máx. de vagas via paginação (`0` = só 1ª página) |
+| `detail_threads` | `5` | Threads paralelas para detalhes |
+| `gd_cookie` | `""` | Cookie do Glassdoor |
+| `silent` | `True` | `False` para mostrar output no terminal |
+
+---
+
 ## Portais Suportados
 
 | Portal | Autenticação | Como obter |
