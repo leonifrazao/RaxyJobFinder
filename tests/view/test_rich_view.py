@@ -8,7 +8,7 @@ from job_search.domain.job_details import JobDetails
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
-from job_search.view.rich_view import RichJobSearchView
+from job_search.interfaces.console.rich_job_search_view import RichJobSearchView
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ class TestChooseLocation:
             view.choose_location([], None)
 
     def test_with_selected_index_skips_prompt(self, view: RichJobSearchView, locations: list[LocationOption]):
-        with patch("job_search.view.rich_view.IntPrompt") as mock_prompt:
+        with patch("job_search.interfaces.console.rich_job_search_view.IntPrompt") as mock_prompt:
             result = view.choose_location(locations, selected_index=2)
 
         assert result == locations[1]
@@ -82,7 +82,7 @@ class TestChooseLocation:
         )
 
     def test_without_selected_index_uses_prompt(self, view: RichJobSearchView, locations: list[LocationOption]):
-        with patch("job_search.view.rich_view.IntPrompt") as mock_prompt:
+        with patch("job_search.interfaces.console.rich_job_search_view.IntPrompt") as mock_prompt:
             mock_prompt.ask.return_value = 1
             result = view.choose_location(locations, selected_index=None)
 
@@ -98,7 +98,7 @@ class TestChooseLocation:
             view.choose_location(locations, selected_index=0)
 
     def test_shows_location_options_table(self, view: RichJobSearchView, locations: list[LocationOption]):
-        with patch("job_search.view.rich_view.IntPrompt") as mock_prompt:
+        with patch("job_search.interfaces.console.rich_job_search_view.IntPrompt") as mock_prompt:
             mock_prompt.ask.return_value = 1
             view.choose_location(locations, None)
 

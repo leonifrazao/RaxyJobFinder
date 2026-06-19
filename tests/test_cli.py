@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from job_search.cli import ALL_COUNTRY_FILES, DEFAULT_PROVIDER, PROXY_PROVIDERS, SPLITTED_BY_COUNTRY_BASE, build_parser
+from job_search.interfaces.cli.command import ALL_COUNTRY_FILES, DEFAULT_PROVIDER, PROXY_PROVIDERS, SPLITTED_BY_COUNTRY_BASE, build_parser
 
 
 class TestBuildParser:

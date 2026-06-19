@@ -7,7 +7,7 @@ import pytest
 from job_search.domain.job_details import JobDetails
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
-from job_search.infrastructure.json_repository import JsonJobRepository
+from job_search.infrastructure.persistence.json_job_repository import JsonJobRepository
 
 
 @pytest.fixture

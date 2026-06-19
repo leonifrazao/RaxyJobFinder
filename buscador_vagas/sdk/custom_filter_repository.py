@@ -10,6 +10,6 @@ class _CustomFilterRepository:
     def load(self, filter_path: str | None) -> JobFilterSet:
         if self.filter_set is not None:
             return self.filter_set
-        from buscador_vagas.job_search.infrastructure.json_filter_repository import JsonJobFilterRepository
+        from buscador_vagas.job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
 
         return JsonJobFilterRepository().load(filter_path)

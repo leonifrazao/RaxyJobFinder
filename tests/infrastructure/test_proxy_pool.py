@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from job_search.domain.proxy import BridgeEndpoint
-from job_search.infrastructure.proxy_pool import ProxyFrameworkPool
+from job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ class TestPrepare:
         mock_proxy.test.return_value = [mock_entry, mock_entry]
         mock_proxy.start.return_value = [mock_item_0, mock_item_1]
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
             result = pool.prepare(
                 sources=["https://example.com/proxies"],
                 max_count=100,
@@ -68,7 +68,7 @@ class TestPrepare:
             captured["use_console"] = use_console
             return mock_proxy
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", side_effect=fake_create_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", side_effect=fake_create_proxy):
             pool.prepare(
                 sources=["src1", "src2"],
                 max_count=50,
@@ -102,7 +102,7 @@ class TestPrepare:
 
         mock_proxy.test.side_effect = fake_proxy_test
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
             pool.prepare(
                 sources=["src"],
                 max_count=100,
@@ -129,7 +129,7 @@ class TestPrepare:
             MagicMock(uri="socks5://127.0.0.1:1082"),
         ]
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
             pool.prepare(
                 sources=["src"],
                 max_count=100,
@@ -147,7 +147,7 @@ class TestPrepare:
 
         mock_proxy.test.return_value = [mock_failed]
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
             with pytest.raises(RuntimeError, match="Nenhuma proxy funcional"):
                 pool.prepare(
                     sources=["src"],
@@ -161,7 +161,7 @@ class TestPrepare:
     def test_empty_test_results_raises(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock):
         mock_proxy.test.return_value = []
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
             with pytest.raises(RuntimeError, match="Nenhuma proxy funcional"):
                 pool.prepare(
                     sources=["src"],
@@ -181,7 +181,7 @@ class TestStop:
         mock_proxy.test.return_value = [mock_entry]
         mock_proxy.start.return_value = [MagicMock(uri="socks5://127.0.0.1:1080")]
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
             pool.prepare(
                 sources=["src"],
                 max_count=10,
@@ -204,7 +204,7 @@ class TestStop:
         mock_proxy.test.return_value = [mock_entry]
         mock_proxy.start.return_value = [MagicMock(uri="socks5://127.0.0.1:1080")]
 
-        with patch("job_search.infrastructure.proxy_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
             pool.prepare(
                 sources=["src"],
                 max_count=10,

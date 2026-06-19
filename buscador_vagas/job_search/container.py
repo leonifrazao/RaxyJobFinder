@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from dependency_injector import containers, providers
 
-from job_search.infrastructure.http_client import BotasaurusHttpClient
-from job_search.infrastructure.json_filter_repository import JsonJobFilterRepository
-from job_search.infrastructure.json_repository import JsonJobRepository
-from job_search.infrastructure.proxy_pool import ProxyFrameworkPool
-from job_search.modules.glassdoor import GlassdoorJobBoardAdapter
-from job_search.modules.gupy import GupyJobBoardAdapter
-from job_search.modules.linkedin import LinkedInJobBoardAdapter
 from job_search.application import JobSearchService
-from job_search.view import RichJobSearchView
+from job_search.infrastructure.http.botasaurus_http_client import BotasaurusHttpClient
+from job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
+from job_search.infrastructure.persistence.json_job_repository import JsonJobRepository
+from job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
+from job_search.interfaces.console.rich_job_search_view import RichJobSearchView
+from job_search.providers.job_boards.glassdoor import GlassdoorJobBoardAdapter
+from job_search.providers.job_boards.gupy import GupyJobBoardAdapter
+from job_search.providers.job_boards.linkedin import LinkedInJobBoardAdapter
 
 
 class JobSearchContainer(containers.DeclarativeContainer):

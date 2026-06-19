@@ -40,12 +40,12 @@ class TestConfig:
 class TestProviders:
     def test_http_client_provider(self, container: JobSearchContainer):
         client = container.http_client()
-        from job_search.infrastructure.http_client import BotasaurusHttpClient
+        from job_search.infrastructure.http.botasaurus_http_client import BotasaurusHttpClient
         assert isinstance(client, BotasaurusHttpClient)
 
     def test_view_provider(self, container: JobSearchContainer):
         view = container.view()
-        from job_search.view.rich_view import RichJobSearchView
+        from job_search.interfaces.console.rich_job_search_view import RichJobSearchView
         assert isinstance(view, RichJobSearchView)
 
     def test_view_is_singleton(self, container: JobSearchContainer):
@@ -55,17 +55,17 @@ class TestProviders:
 
     def test_repository_provider(self, container: JobSearchContainer):
         repo = container.repository()
-        from job_search.infrastructure.json_repository import JsonJobRepository
+        from job_search.infrastructure.persistence.json_job_repository import JsonJobRepository
         assert isinstance(repo, JsonJobRepository)
 
     def test_filter_repository_provider(self, container: JobSearchContainer):
         repo = container.filter_repository()
-        from job_search.infrastructure.json_filter_repository import JsonJobFilterRepository
+        from job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
         assert isinstance(repo, JsonJobFilterRepository)
 
     def test_proxy_pool_provider(self, container: JobSearchContainer):
         pool = container.proxy_pool()
-        from job_search.infrastructure.proxy_pool import ProxyFrameworkPool
+        from job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
         assert isinstance(pool, ProxyFrameworkPool)
 
     def test_proxy_pool_passes_config(self, container: JobSearchContainer):
@@ -77,22 +77,22 @@ class TestProviders:
 class TestAdapterSelector:
     def test_linkedin_adapter(self, container: JobSearchContainer):
         adapter = container.linkedin_adapter()
-        from job_search.modules.linkedin import LinkedInJobBoardAdapter
+        from job_search.providers.job_boards.linkedin import LinkedInJobBoardAdapter
         assert isinstance(adapter, LinkedInJobBoardAdapter)
 
     def test_gupy_adapter(self, container: JobSearchContainer):
         adapter = container.gupy_adapter()
-        from job_search.modules.gupy import GupyJobBoardAdapter
+        from job_search.providers.job_boards.gupy import GupyJobBoardAdapter
         assert isinstance(adapter, GupyJobBoardAdapter)
 
     def test_glassdoor_adapter(self, container: JobSearchContainer):
         adapter = container.glassdoor_adapter()
-        from job_search.modules.glassdoor import GlassdoorJobBoardAdapter
+        from job_search.providers.job_boards.glassdoor import GlassdoorJobBoardAdapter
         assert isinstance(adapter, GlassdoorJobBoardAdapter)
 
     def test_selector_returns_linkedin(self, container: JobSearchContainer):
         adapter = container.job_board_adapter()
-        from job_search.modules.linkedin import LinkedInJobBoardAdapter
+        from job_search.providers.job_boards.linkedin import LinkedInJobBoardAdapter
         assert isinstance(adapter, LinkedInJobBoardAdapter)
 
     def test_selector_returns_gupy(self):
@@ -101,7 +101,7 @@ class TestAdapterSelector:
         c.config.provider_name.from_value("p")
         c.config.gd_cookie.from_value("")
         adapter = c.job_board_adapter()
-        from job_search.modules.gupy import GupyJobBoardAdapter
+        from job_search.providers.job_boards.gupy import GupyJobBoardAdapter
         assert isinstance(adapter, GupyJobBoardAdapter)
 
     def test_selector_returns_glassdoor(self):
@@ -110,7 +110,7 @@ class TestAdapterSelector:
         c.config.provider_name.from_value("p")
         c.config.gd_cookie.from_value("")
         adapter = c.job_board_adapter()
-        from job_search.modules.glassdoor import GlassdoorJobBoardAdapter
+        from job_search.providers.job_boards.glassdoor import GlassdoorJobBoardAdapter
         assert isinstance(adapter, GlassdoorJobBoardAdapter)
 
     def test_selector_unknown_portal_raises(self):

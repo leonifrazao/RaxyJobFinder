@@ -5,7 +5,7 @@ import sys
 
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.container import JobSearchContainer
-from job_search.proxy_sources import (
+from job_search.infrastructure.proxy.proxy_sources import (
     ALL_COUNTRY_FILES,
     DEFAULT_PROVIDER,
     PROXY_PROVIDERS,

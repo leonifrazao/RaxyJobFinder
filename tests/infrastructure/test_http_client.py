@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from job_search.infrastructure.http_client import BotasaurusHttpClient
+from job_search.infrastructure.http.botasaurus_http_client import BotasaurusHttpClient
 
-PATCH_TARGET = "job_search.infrastructure.http_client.botasaurus_request"
+PATCH_TARGET = "job_search.infrastructure.http.botasaurus_http_client.botasaurus_request"
 
 
 @pytest.fixture

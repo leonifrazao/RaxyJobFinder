@@ -39,7 +39,7 @@ def mock_deps():
         "sys.modules",
         {
             "buscador_vagas.job_search.container": mock_container_module,
-            "buscador_vagas.job_search.infrastructure.proxy_pool": mock_proxy_framework,
+            "buscador_vagas.job_search.infrastructure.proxy.proxy_framework_pool": mock_proxy_framework,
         },
     ):
         yield container, mock_service

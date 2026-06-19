@@ -5,7 +5,7 @@ import json
 import pytest
 
 from job_search.domain.filtering import JobFilterSet
-from job_search.infrastructure.json_filter_repository import JsonJobFilterRepository
+from job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
 
 
 @pytest.fixture

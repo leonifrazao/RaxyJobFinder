@@ -8,7 +8,7 @@ from job_search.domain.proxy import BridgeEndpoint
 try:
     from src import create_proxy
 except ImportError:
-    sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "proxy_framework"))
+    sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "proxy_framework"))
     from src import create_proxy
 
 

@@ -3,7 +3,8 @@ from __future__ import annotations
 from buscador_vagas.job_search.application.dto.input.job_search_request import JobSearchRequest
 from buscador_vagas.job_search.domain.filtering import JobFilterSet
 from buscador_vagas.job_search.domain.job_posting import JobPosting
-from buscador_vagas.job_search.proxy_sources import DEFAULT_PROVIDER, resolve_proxy_sources
+from buscador_vagas.job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
+from buscador_vagas.job_search.infrastructure.proxy.proxy_sources import DEFAULT_PROVIDER, resolve_proxy_sources
 from buscador_vagas.sdk.custom_filter_repository import _CustomFilterRepository
 from buscador_vagas.sdk.in_memory_repository import InMemoryRepository
 from buscador_vagas.sdk.silent_view import SilentView
@@ -40,8 +41,6 @@ class JobFinder:
         from dependency_injector import providers
 
         from buscador_vagas.job_search.container import JobSearchContainer
-        from buscador_vagas.job_search.infrastructure.proxy_pool import ProxyFrameworkPool
-
         if portal not in self.PORTALS:
             raise ValueError(
                 f"Portal invalido: {portal}. Opcoes: {', '.join(self.PORTALS)}"

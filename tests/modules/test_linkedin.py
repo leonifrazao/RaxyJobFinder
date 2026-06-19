@@ -12,7 +12,7 @@ from job_search.domain.job_details import JobDetails
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
 from job_search.domain.search_query import SearchQuery
-from job_search.modules.linkedin.adapter import LinkedInJobBoardAdapter
+from job_search.providers.job_boards.linkedin.adapter import LinkedInJobBoardAdapter
 
 
 SAMPLE_CARD_HTML = """

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from job_search.cli import main
+from job_search.interfaces.cli import main
 
 
 if __name__ == "__main__":
