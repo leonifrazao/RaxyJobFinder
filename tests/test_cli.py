@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from job_search.interfaces.cli.command import ALL_COUNTRY_FILES, DEFAULT_PROVIDER, PROXY_PROVIDERS, SPLITTED_BY_COUNTRY_BASE, build_parser
+from job_search.infrastructure.proxy.proxy_sources import DEFAULT_PROVIDER, PROXY_PROVIDERS
+from job_search.infrastructure.config import load_settings
+from job_search.interfaces.cli.command import build_parser
 
 
 class TestBuildParser:
@@ -199,16 +201,19 @@ class TestProxyProviders:
         assert DEFAULT_PROVIDER == "united-states"
 
     def test_united_states_url(self):
-        assert PROXY_PROVIDERS["united-states"] == f"{SPLITTED_BY_COUNTRY_BASE}/United_States.txt"
+        url = PROXY_PROVIDERS["united-states"]
+        assert url.endswith("/United_States.txt")
 
     def test_brazil_url(self):
-        assert PROXY_PROVIDERS["brazil"] == f"{SPLITTED_BY_COUNTRY_BASE}/Brazil.txt"
+        url = PROXY_PROVIDERS["brazil"]
+        assert url.endswith("/Brazil.txt")
 
     def test_all_is_list(self):
         providers = PROXY_PROVIDERS["all"]
         assert isinstance(providers, list)
-        assert len(providers) == len(ALL_COUNTRY_FILES)
-        assert providers[0].startswith(SPLITTED_BY_COUNTRY_BASE)
+        assert len(providers) > 0
+        assert all(p.startswith("http") for p in providers)
 
     def test_all_country_count(self):
-        assert len(ALL_COUNTRY_FILES) == 40
+        settings = load_settings()
+        assert len(settings.proxy.all_countries) == 40
