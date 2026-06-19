@@ -7,6 +7,7 @@ import pytest
 from job_search.infrastructure.http.botasaurus_http_client import BotasaurusHttpClient
 
 PATCH_TARGET = "job_search.infrastructure.http.botasaurus_http_client.botasaurus_request"
+BRIDGE_CHECK = "job_search.infrastructure.http.botasaurus_http_client.BotasaurusHttpClient._check_bridge_reachable"
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ class TestGet:
                 return wrapper
             return deco
 
-        with patch(PATCH_TARGET, side_effect=make_decorator):
+        with patch(PATCH_TARGET, side_effect=make_decorator), patch(BRIDGE_CHECK):
             with patch.object(client, "_to_cookies", return_value={"session": "abc"}):
                 result = client.get("http://bridge:8080", "https://example.com", 10.0)
 
@@ -56,7 +57,7 @@ class TestGet:
                 return wrapper
             return deco
 
-        with patch(PATCH_TARGET, side_effect=make_decorator):
+        with patch(PATCH_TARGET, side_effect=make_decorator), patch(BRIDGE_CHECK):
             with pytest.raises(RuntimeError, match="request retornou sem resposta"):
                 client.get("http://bridge:8080", "https://example.com", 10.0)
 
@@ -78,7 +79,7 @@ class TestGet:
                 return wrapper
             return deco
 
-        with patch(PATCH_TARGET, side_effect=make_decorator):
+        with patch(PATCH_TARGET, side_effect=make_decorator), patch(BRIDGE_CHECK):
             client.get("http://bridge:8080", "https://example.com", 5.0, headers={"Authorization": "Bearer x"})
 
         assert captured["data"]["headers"] == {"Authorization": "Bearer x"}
@@ -100,7 +101,7 @@ class TestGet:
                 return wrapper
             return deco
 
-        with patch(PATCH_TARGET, side_effect=make_decorator):
+        with patch(PATCH_TARGET, side_effect=make_decorator), patch(BRIDGE_CHECK):
             client.get("http://bridge:8080", "https://example.com", 10.0)
 
         assert kwargs_captured.get("max_retry") == 1
@@ -124,7 +125,7 @@ class TestPost:
                 return wrapper
             return deco
 
-        with patch(PATCH_TARGET, side_effect=make_decorator):
+        with patch(PATCH_TARGET, side_effect=make_decorator), patch(BRIDGE_CHECK):
             result = client.post("http://bridge:8080", "https://example.com", 10.0, json_body={"name": "test"})
 
         assert result.status_code == 201
@@ -148,7 +149,7 @@ class TestPost:
                 return wrapper
             return deco
 
-        with patch(PATCH_TARGET, side_effect=make_decorator):
+        with patch(PATCH_TARGET, side_effect=make_decorator), patch(BRIDGE_CHECK):
             client.post("http://bridge:8080", "https://example.com", 10.0, json_body={"k": "v"})
 
         assert captured["headers"].get("Content-Type") == "application/json"
@@ -167,7 +168,7 @@ class TestPost:
                 return wrapper
             return deco
 
-        with patch(PATCH_TARGET, side_effect=make_decorator):
+        with patch(PATCH_TARGET, side_effect=make_decorator), patch(BRIDGE_CHECK):
             with pytest.raises(RuntimeError, match="request retornou sem resposta"):
                 client.post("http://bridge:8080", "https://example.com", 10.0)
 

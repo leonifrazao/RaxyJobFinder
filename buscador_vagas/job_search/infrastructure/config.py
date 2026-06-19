@@ -55,6 +55,7 @@ class ProxyConfig:
 class RedisConfig:
     url: str = "redis://localhost:6379/0"
     channel: str = "raxy:events"
+    data_channel: str = "vagas:disponiveis"
 
 
 @dataclass
@@ -141,6 +142,7 @@ def _apply_env_overrides(data: dict) -> dict:
         "RAXY_ERROR_LOG_PATH": ("logging", "error_path"),
         "RAXY_REDIS_URL": ("redis", "url"),
         "RAXY_REDIS_CHANNEL": ("redis", "channel"),
+        "RAXY_REDIS_DATA_CHANNEL": ("redis", "data_channel"),
     }
     for env_key, keys in env_map.items():
         value = os.getenv(env_key)
@@ -246,6 +248,7 @@ def _default_dict() -> dict:
         "redis": {
             "url": "redis://localhost:6379/0",
             "channel": "raxy:events",
+            "data_channel": "vagas:disponiveis",
         },
         "logging": {
             "level": "INFO",

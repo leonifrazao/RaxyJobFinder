@@ -16,6 +16,7 @@ pkgs.mkShell {
   packages = [
     python
     pkgs.stdenv.cc.cc.lib
+    pkgs.redis
   ] ++ xrayPackages;
 
   shellHook = ''
@@ -77,6 +78,13 @@ PY
       echo "Xray/V2Ray: $XRAY_PATH"
     else
       echo "Aviso: xray/v2ray nao encontrado. Configure XRAY_PATH manualmente."
+    fi
+
+    if ! redis-cli ping >/dev/null 2>&1; then
+      redis-server --daemonize yes --port 6379 2>/dev/null
+      echo "Redis iniciado em localhost:6379"
+    else
+      echo "Redis ja esta rodando"
     fi
   '';
 }

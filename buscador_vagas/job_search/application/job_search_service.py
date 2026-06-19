@@ -74,13 +74,17 @@ class JobSearchService:
                 return 0
 
             self.view.show_jobs(result.jobs, request.show_jobs)
+            self._publish_event("detail_started", f"Iniciando detalhamento de {len(result.jobs)} vagas...", total=len(result.jobs))
             detailed_jobs = self._enrich_jobs(result.jobs, bridges, result.search_url, request)
             filtered_jobs = self._filter_jobs(detailed_jobs, request.filters_path)
 
+            self._publish_event("save_started", "Salvando vagas...")
             self.repository.save_jobs(request.jobs_output, [job.summary for job in filtered_jobs])
             self.view.info(f"[bold green]Vagas salvas em:[/] {request.jobs_output}")
+            self._publish_event("save_details_started", "Salvando detalhes...")
             self.repository.save_jobs(request.details_output, filtered_jobs)
             self.view.info(f"[bold green]Vagas detalhadas salvas em:[/] {request.details_output}")
+            self._publish_event("save_finished", "Resultados salvos", jobs_output=request.jobs_output, details_output=request.details_output)
             self.view.show_job_details(filtered_jobs, request.show_jobs)
             log.bind(
                 jobs_found=len(result.jobs),
@@ -98,12 +102,26 @@ class JobSearchService:
                 jobs_output=request.jobs_output,
                 details_output=request.details_output,
             )
+            self._publish_event(
+                "search_data",
+                f"Dados completos de {len(filtered_jobs)} vagas",
+                portal=self.adapter.name,
+                jobs_output=request.jobs_output,
+                details_output=request.details_output,
+                jobs_count=len(filtered_jobs),
+                data=[job.to_dict() for job in filtered_jobs],
+            )
             return 0
         finally:
             self.proxy_pool.stop()
 
     def _prepare_bridges(self, query: SearchQuery, request: JobSearchRequest) -> list[BridgeEndpoint]:
         test_url = self.adapter.build_search_url(query)
+        self._publish_event("proxy_prepare_started", "Iniciando preparacao de proxies...")
+
+        def on_progress(name: str, message: str, payload: dict) -> None:
+            self._publish_event(name, message, **payload)
+
         bridges = self.proxy_pool.prepare(
             sources=request.proxy_sources,
             max_count=request.max_count,
@@ -111,6 +129,7 @@ class JobSearchService:
             threads=request.threads,
             timeout=request.timeout,
             test_url=test_url,
+            progress_callback=on_progress,
         )
         self.view.info(f"[bold]Bridges ativas:[/] {len(bridges)}")
         self.view.info(f"[bold]Rotacao de detalhes:[/] 1 proxy a cada {max(1, request.jobs_per_proxy)} vagas")
@@ -236,6 +255,9 @@ class JobSearchService:
                 results[i] = future.result()
                 done += 1
                 self.view.info(f"[bold]Detalhes:[/] {done}/{total} - {results[i].summary.title or results[i].summary.external_id}")
+                if done % 5 == 0 or done == total:
+                    ok_count = sum(1 for r in results[:done] if r is not None and r.details is not None)
+                    self._publish_event("detail_progress", f"{done}/{total}", done=done, total=total, ok=ok_count)
 
         enriched = [r for r in results if r is not None]
         enriched.extend(session.unprocessed_postings())

@@ -567,15 +567,119 @@ Cookie de sessão do Glassdoor (obrigatório para o portal Glassdoor). Faça log
 
 ---
 
+## TUI
+
+Raxy também oferece uma interface TUI interativa com PyTermGUI:
+
+```bash
+# Abre a interface gráfica no terminal
+python buscador_vagas/buscador.py
+```
+
+A TUI exibe um formulário completo com todos os parâmetros de busca, status em tempo real (proxy, busca, detalhes, salvar) via Redis pub/sub, botões para executar/limpar/ajudar, e popups de erro/ajuda.
+
+Para usar com Redis, as variáveis `RAXY_REDIS_URL` e `RAXY_REDIS_CHANNEL` são repassadas automaticamente ao container ao iniciar a busca pela TUI.
+
+---
+
+## Eventos / Redis
+
+O Raxy publica eventos em tempo real via Redis pub/sub durante todo o ciclo de busca.
+
+### Canais
+
+| Canal | Conteúdo | Quando |
+|-------|----------|--------|
+| `raxy:events` | Evento JSON: `{name, message, level, payload, occurred_at}` | Todo ciclo de vida |
+| `vagas:disponiveis` | `{portal, total_vagas, vagas: [...]}` | Ao finalizar a busca |
+
+### Consumindo dados de vagas
+
+```python
+import redis, json
+
+r = redis.Redis()
+pubsub = r.pubsub()
+pubsub.subscribe("vagas:disponiveis")
+for msg in pubsub.listen():
+    if msg["type"] == "message":
+        data = json.loads(msg["data"])
+        print(f"{data['portal']}: {data['total_vagas']} vagas")
+```
+
+### Config
+
+```yaml
+redis:
+  url: "redis://localhost:6379/0"
+  channel: "raxy:events"
+```
+
+| Env Var | Sobrepoe |
+|---------|----------|
+| `RAXY_REDIS_URL` | `redis.url` |
+| `RAXY_REDIS_CHANNEL` | `redis.channel` |
+| `RAXY_REDIS_DATA_CHANNEL` | `redis.data_channel` |
+| `RAXY_LOG_LEVEL` | `logging.level` |
+| `XRAY_PATH` | Caminho do binário Xray |
+
+---
+
+## Proxy System
+
+O Raxy baixa listas de proxies de URLs públicas (organizadas por país), testa conectividade em paralelo, e inicia bridges Xray locais (`http://127.0.0.1:54xxx`).
+
+- **Rotação**: a cada N vagas detalhadas troca de bridge (round-robin)
+- **Fallback**: se uma bridge falha, a próxima disponível assume
+- **Cache**: resultados de teste salvos em `proxy_cache.json`
+
+Provedores disponíveis: `united-states`, `brazil`, `canada`, `germany`, `netherlands`, `all` (40+ países).
+
+---
+
+## Testes
+
+```bash
+pytest tests/ -v
+```
+
+Estrutura: `tests/domain/`, `tests/application/`, `tests/infrastructure/`, `tests/modules/`, `tests/tui/`, `tests/view/`.
+
+---
+
 ## Arquitetura
 
+Arquitetura hexagonal (Ports & Adapters):
+
 ```
-buscador.py              → entrypoint
-job_search/cli.py        → parser de argumentos
-job_search/container.py  → injeção de dependências
-job_search/domain/       → DTOs, entidades, ports, filtros
-job_search/service/      → orquestração
-job_search/modules/      → adaptadores dos portais (linkedin, gupy, glassdoor)
-job_search/infrastructure/ → HTTP, proxy pool, repositório JSON
-job_search/view/         → interface Rich (tabela, seleção interativa)
+                  +---------+  TUI  +---------+
+                  |  CLI    |       |  SDK    |
+                  +----+----+       +----+----+
+                       |                 |
+              +--------+--------+--------+
+              |                  |
+      JobSearchService           |
+              |                  |
+     +--------+--------+        |
+     |        |        |        |
+[Ports]  [Domínio]  [Eventos]   |
+     |        |        |        |
+LinkedIn  Gupy  Glassdoor       |
+     |                  |       |
+BotasaurusHttpClient    Redis   |
+     |                  |       |
+ProxyFrameworkPool -----+       |
+     |                          |
+[Xray bridges]            [JSON files]
 ```
+
+| Diretório | Camada |
+|-----------|--------|
+| `job_search/domain/` | Entidades de negócio |
+| `job_search/application/` | Orquestração, DTOs, Ports, Eventos |
+| `job_search/infrastructure/` | HTTP, Redis, JSON, Proxy, Config |
+| `job_search/interfaces/` | CLI, TUI, Console |
+| `job_search/providers/` | Adaptadores dos portais |
+| `sdk/` | API programática |
+
+Entrypoint: `buscador_vagas/buscador.py` → `launcher.py` → CLI (se args) ou TUI.

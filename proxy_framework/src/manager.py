@@ -12,11 +12,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 try:
-    import urllib3
-
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    import urllib3 as _urllib3
 except Exception:
-    pass
+    _urllib3 = None
 
 try:
     import requests

@@ -38,7 +38,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-count", type=int, default=177, help="quantidade maxima de configs para carregar")
     parser.add_argument("--threads", type=int, default=8, help="workers de teste de proxy")
     parser.add_argument("--timeout", type=float, default=12.0, help="timeout em segundos para busca/typeahead/teste")
-    parser.add_argument("--detail-timeout", type=float, default=5.0, help="timeout em segundos para cada detalhe de vaga")
+    parser.add_argument("--detail-timeout", type=float, default=15.0, help="timeout em segundos para cada detalhe de vaga")
     parser.add_argument("--jobs-output", help="arquivo JSON para salvar as vagas extraidas")
     parser.add_argument("--details-output", help="arquivo JSON para salvar vagas com detalhes")
     parser.add_argument("--filters", help="arquivo JSON com filtros desacoplados para considerar vagas")

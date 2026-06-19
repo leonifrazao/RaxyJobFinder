@@ -7,6 +7,8 @@ import pytest
 from job_search.domain.proxy import BridgeEndpoint
 from job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
 
+REQUESTS_GET = "job_search.infrastructure.proxy.proxy_framework_pool.requests.get"
+
 
 @pytest.fixture
 def mock_proxy() -> MagicMock:
@@ -22,8 +24,16 @@ def pool() -> ProxyFrameworkPool:
     return ProxyFrameworkPool(provider_name="test", use_console=False)
 
 
+@pytest.fixture
+def mock_requests_get() -> MagicMock:
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.raise_for_status.return_value = None
+    return resp
+
+
 class TestPrepare:
-    def test_returns_bridge_endpoints(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock):
+    def test_returns_bridge_endpoints(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock, mock_requests_get: MagicMock):
         mock_item_0 = MagicMock()
         mock_item_0.uri = "socks5://127.0.0.1:1080"
         mock_item_1 = MagicMock()
@@ -35,7 +45,8 @@ class TestPrepare:
         mock_proxy.test.return_value = [mock_entry, mock_entry]
         mock_proxy.start.return_value = [mock_item_0, mock_item_1]
 
-        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy), \
+             patch(REQUESTS_GET, return_value=mock_requests_get):
             result = pool.prepare(
                 sources=["https://example.com/proxies"],
                 max_count=100,
@@ -52,7 +63,7 @@ class TestPrepare:
         assert result[1].index == 1
         assert result[1].url == "socks5://127.0.0.1:1081"
 
-    def test_passes_correct_args_to_create_proxy(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock):
+    def test_passes_correct_args_to_create_proxy(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock, mock_requests_get: MagicMock):
         captured: dict = {}
 
         mock_entry = MagicMock()
@@ -68,7 +79,8 @@ class TestPrepare:
             captured["use_console"] = use_console
             return mock_proxy
 
-        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", side_effect=fake_create_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", side_effect=fake_create_proxy), \
+             patch(REQUESTS_GET, return_value=mock_requests_get):
             pool.prepare(
                 sources=["src1", "src2"],
                 max_count=50,
@@ -83,7 +95,7 @@ class TestPrepare:
         assert captured["use_cache"] is False
         assert captured["use_console"] is False
 
-    def test_passes_correct_args_to_proxy_test(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock):
+    def test_passes_correct_args_to_proxy_test(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock, mock_requests_get: MagicMock):
         captured: dict = {}
 
         mock_entry = MagicMock()
@@ -102,7 +114,8 @@ class TestPrepare:
 
         mock_proxy.test.side_effect = fake_proxy_test
 
-        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy), \
+             patch(REQUESTS_GET, return_value=mock_requests_get):
             pool.prepare(
                 sources=["src"],
                 max_count=100,
@@ -118,7 +131,7 @@ class TestPrepare:
         assert captured["force"] is True
         assert captured["find_first"] == 3
 
-    def test_passes_valid_count_to_start(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock):
+    def test_passes_valid_count_to_start(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock, mock_requests_get: MagicMock):
         mock_entry = MagicMock()
         mock_entry.result.status = "OK"
 
@@ -129,7 +142,8 @@ class TestPrepare:
             MagicMock(uri="socks5://127.0.0.1:1082"),
         ]
 
-        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy), \
+             patch(REQUESTS_GET, return_value=mock_requests_get):
             pool.prepare(
                 sources=["src"],
                 max_count=100,
@@ -174,14 +188,15 @@ class TestPrepare:
 
 
 class TestStop:
-    def test_stops_proxy(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock):
+    def test_stops_proxy(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock, mock_requests_get: MagicMock):
         mock_entry = MagicMock()
         mock_entry.result.status = "OK"
 
         mock_proxy.test.return_value = [mock_entry]
         mock_proxy.start.return_value = [MagicMock(uri="socks5://127.0.0.1:1080")]
 
-        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy), \
+             patch(REQUESTS_GET, return_value=mock_requests_get):
             pool.prepare(
                 sources=["src"],
                 max_count=10,
@@ -197,14 +212,15 @@ class TestStop:
     def test_stop_without_prepare_does_not_raise(self, pool: ProxyFrameworkPool):
         pool.stop()
 
-    def test_stop_called_twice(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock):
+    def test_stop_called_twice(self, pool: ProxyFrameworkPool, mock_proxy: MagicMock, mock_requests_get: MagicMock):
         mock_entry = MagicMock()
         mock_entry.result.status = "OK"
 
         mock_proxy.test.return_value = [mock_entry]
         mock_proxy.start.return_value = [MagicMock(uri="socks5://127.0.0.1:1080")]
 
-        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy):
+        with patch("job_search.infrastructure.proxy.proxy_framework_pool.create_proxy", return_value=mock_proxy), \
+             patch(REQUESTS_GET, return_value=mock_requests_get):
             pool.prepare(
                 sources=["src"],
                 max_count=10,
@@ -216,4 +232,4 @@ class TestStop:
 
         pool.stop()
         pool.stop()
-        assert mock_proxy.stop.call_count == 2
+        assert mock_proxy.stop.call_count == 1

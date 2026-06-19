@@ -90,6 +90,19 @@ class ProcessManager(ProxyProcessManager):
                 proc.kill()
             except Exception:
                 pass
+        finally:
+            for pipe_name in ("stdout", "stderr"):
+                pipe = getattr(proc, pipe_name, None)
+                if pipe is not None:
+                    try:
+                        pipe.close()
+                    except Exception:
+                        pass
+            if proc.stdin:
+                try:
+                    proc.stdin.close()
+                except Exception:
+                    pass
 
     @staticmethod
     def safe_remove_dir(path: Optional[Path]) -> None:

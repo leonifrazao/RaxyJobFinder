@@ -9,4 +9,9 @@ from job_search.infrastructure.messaging.redis_search_event_publisher import Red
 def build_search_event_publisher(redis_url: str | None, channel: str | None) -> SearchEventPublisher:
     if not redis_url:
         return NoopSearchEventPublisher()
-    return RedisSearchEventPublisher(redis_url=redis_url, channel=channel or load_settings().redis.channel)
+    settings = load_settings()
+    return RedisSearchEventPublisher(
+        redis_url=redis_url,
+        channel=channel or settings.redis.channel,
+        data_channel=settings.redis.data_channel,
+    )
