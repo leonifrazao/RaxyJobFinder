@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from buscador_vagas.job_search.domain.filtering import JobFilterSet
+from job_search.domain.filtering import JobFilterSet
 
 
 class _CustomFilterRepository:
@@ -10,6 +10,6 @@ class _CustomFilterRepository:
     def load(self, filter_path: str | None) -> JobFilterSet:
         if self.filter_set is not None:
             return self.filter_set
-        from buscador_vagas.job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
+        from job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
 
         return JsonJobFilterRepository().load(filter_path)

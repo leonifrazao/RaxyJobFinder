@@ -4,8 +4,8 @@ import json
 import os
 from pathlib import Path
 
-from buscador_vagas.job_search.domain.job_posting import JobPosting
-from buscador_vagas.job_search.domain.job_summary import JobSummary
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
 
 
 class InMemoryRepository:

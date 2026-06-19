@@ -15,7 +15,7 @@ from buscador_vagas import (
     LocationOption,
     SilentView,
 )
-from buscador_vagas.job_search.application.dto.input.job_search_request import JobSearchRequest
+from job_search.application.dto.input.job_search_request import JobSearchRequest
 
 
 @pytest.fixture
@@ -38,8 +38,8 @@ def mock_deps():
     with patch.dict(
         "sys.modules",
         {
-            "buscador_vagas.job_search.container": mock_container_module,
-            "buscador_vagas.job_search.infrastructure.proxy.proxy_framework_pool": mock_proxy_framework,
+            "job_search.container": mock_container_module,
+            "job_search.infrastructure.proxy.proxy_framework_pool": mock_proxy_framework,
         },
     ):
         yield container, mock_service
