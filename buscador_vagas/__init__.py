@@ -11,6 +11,7 @@ from .job_search.domain import (
     SearchResult,
 )
 from .job_search.domain.filters import JobFilterSet
+from .job_search.proxy_sources import DEFAULT_PROVIDER, PROXY_PROVIDERS, resolve_proxy_sources
 
 __all__ = [
     "BridgeEndpoint",
@@ -26,27 +27,6 @@ __all__ = [
     "SilentView",
     "InMemoryRepository",
 ]
-
-SPLITTED_BY_COUNTRY_BASE = "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-country"
-ALL_COUNTRY_FILES = [
-    "Albania", "Australia", "Bosnia_and_Herzegovina", "Brazil", "Bulgaria",
-    "Canada", "Czechia", "Finland", "France", "Georgia", "Germany",
-    "Hong_Kong", "Hungary", "India", "Ireland", "Israel", "Italy", "Japan",
-    "Latvia", "Malaysia", "Moldova", "Netherlands", "Norway", "Philippines",
-    "Poland", "Russia", "Serbia", "Singapore", "South_Africa", "South_Korea",
-    "Spain", "Sweden", "Switzerland", "Taiwan", "Thailand", "Turkey",
-    "United_Arab_Emirates", "United_Kingdom", "United_States", "Unknown",
-]
-PROXY_PROVIDERS = {
-    "united-states": f"{SPLITTED_BY_COUNTRY_BASE}/United_States.txt",
-    "brazil": f"{SPLITTED_BY_COUNTRY_BASE}/Brazil.txt",
-    "canada": f"{SPLITTED_BY_COUNTRY_BASE}/Canada.txt",
-    "germany": f"{SPLITTED_BY_COUNTRY_BASE}/Germany.txt",
-    "netherlands": f"{SPLITTED_BY_COUNTRY_BASE}/Netherlands.txt",
-    "all": [f"{SPLITTED_BY_COUNTRY_BASE}/{c}.txt" for c in ALL_COUNTRY_FILES],
-}
-DEFAULT_PROVIDER = "all"
-
 
 class SilentView:
     def info(self, message: str) -> None:
@@ -135,15 +115,7 @@ class JobFinder:
                 f"Portal invalido: {portal}. Opcoes: {', '.join(self.PORTALS)}"
             )
 
-        if proxy_sources is None:
-            provider_val = PROXY_PROVIDERS.get(
-                proxy_provider, PROXY_PROVIDERS[DEFAULT_PROVIDER]
-            )
-            proxy_sources = (
-                provider_val
-                if isinstance(provider_val, list)
-                else [provider_val]
-            )
+        proxy_sources = resolve_proxy_sources(proxy_provider, proxy_sources)
 
         self._proxy_sources = proxy_sources
         self._portal = portal
