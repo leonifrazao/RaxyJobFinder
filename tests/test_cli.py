@@ -50,7 +50,7 @@ class TestBuildParser:
     def test_default_detail_timeout(self):
         parser = build_parser()
         args = parser.parse_args([])
-        assert args.detail_timeout == 5.0
+        assert args.detail_timeout == 15.0
 
     def test_default_show_jobs(self):
         parser = build_parser()

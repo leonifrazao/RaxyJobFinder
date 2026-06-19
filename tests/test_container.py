@@ -69,9 +69,10 @@ class TestProviders:
         assert isinstance(pool, ProxyFrameworkPool)
 
     def test_proxy_pool_passes_config(self, container: JobSearchContainer):
+        from job_search.infrastructure.config import load_settings
         pool = container.proxy_pool()
         assert pool.provider_name == "test_provider"
-        assert pool.use_console is True
+        assert pool.use_console is (load_settings().defaults.silent is False)
 
 
 class TestAdapterSelector:
