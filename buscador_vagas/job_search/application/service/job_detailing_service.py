@@ -1,27 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger
 
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.application.events.search_event import SearchEventName
-from job_search.application.ports.job_board_adapter import JobBoardAdapter
-from job_search.application.ports.job_search_view import JobSearchView
+from job_search.application.ports import JobBoardAdapter, JobDetailing, JobSearchView, SearchEventReporter
 from job_search.domain.detailing import JobDetailingSession
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.proxy import BridgeEndpoint
 
-PublishEvent = Callable[..., None]
-
-
-class JobDetailingService:
-    def __init__(self, adapter: JobBoardAdapter, view: JobSearchView, publish_event: PublishEvent) -> None:
+class JobDetailingService(JobDetailing):
+    def __init__(self, adapter: JobBoardAdapter, view: JobSearchView, event_reporter: SearchEventReporter) -> None:
         self.adapter = adapter
         self.view = view
-        self._publish_event = publish_event
+        self.event_reporter = event_reporter
 
     def enrich_jobs(
         self,
@@ -53,7 +48,7 @@ class JobDetailingService:
                 self.view.info(f"[bold]Detalhes:[/] {done}/{total} - {results[i].summary.title or results[i].summary.external_id}")
                 if done % 5 == 0 or done == total:
                     ok_count = sum(1 for r in results[:done] if r is not None and r.details is not None)
-                    self._publish_event(SearchEventName.DETAIL_PROGRESS, f"{done}/{total}", done=done, total=total, ok=ok_count)
+                    self.event_reporter.publish(SearchEventName.DETAIL_PROGRESS, f"{done}/{total}", done=done, total=total, ok=ok_count)
 
         enriched = [r for r in results if r is not None]
         enriched.extend(session.unprocessed_postings())
@@ -90,7 +85,7 @@ class JobDetailingService:
                     job_id=job.external_id,
                     error=last_error,
                 ).warning("job_detail_bridge_failed")
-                self._publish_event(
+                self.event_reporter.publish(
                     SearchEventName.JOB_DETAIL_BRIDGE_FAILED,
                     f"Falha ao detalhar vaga {job.external_id}",
                     level="warning",
@@ -106,7 +101,7 @@ class JobDetailingService:
             job_id=job.external_id,
             error=last_error,
         ).error("job_detail_failed")
-        self._publish_event(
+        self.event_reporter.publish(
             SearchEventName.JOB_DETAIL_FAILED,
             f"Falha ao detalhar vaga {job.external_id}",
             level="error",

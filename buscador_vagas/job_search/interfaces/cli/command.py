@@ -66,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
     container.config.gd_cookie.from_value(args.gd_cookie)
     container.config.redis_url.from_value(os.getenv("RAXY_REDIS_URL", "redis://localhost:6379/0"))
     container.config.events_channel.from_value(os.getenv("RAXY_REDIS_CHANNEL", "raxy:events"))
+    container.config.use_console.from_value(True)
     service = container.job_search_service()
     view = container.view()
     request = JobSearchRequest(

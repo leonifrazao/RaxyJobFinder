@@ -116,6 +116,7 @@ class JobFinder:
         self._container.config.gd_cookie.from_value(gd_cookie)
         self._container.config.redis_url.from_value(os.getenv("RAXY_REDIS_URL", redis_cfg.url))
         self._container.config.events_channel.from_value(os.getenv("RAXY_REDIS_CHANNEL", redis_cfg.channel))
+        self._container.config.use_console.from_value(not silent)
         logger.bind(
             component="sdk",
             portal=portal,

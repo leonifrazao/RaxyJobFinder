@@ -1,3 +1,9 @@
-from .service import BridgeSearchService, JobDetailingService, JobSearchService, SearchResultSaver
+from .service import BridgeSearchService, DefaultSearchEventReporter, JobDetailingService, JobSearchService, SearchResultSaver
 
-__all__ = ["BridgeSearchService", "JobDetailingService", "JobSearchService", "SearchResultSaver"]
+__all__ = [
+    "BridgeSearchService",
+    "DefaultSearchEventReporter",
+    "JobDetailingService",
+    "JobSearchService",
+    "SearchResultSaver",
+]

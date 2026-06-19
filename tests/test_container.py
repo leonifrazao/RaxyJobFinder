@@ -14,6 +14,7 @@ def container() -> JobSearchContainer:
     c.config.portal_name.from_value("linkedin")
     c.config.provider_name.from_value("test_provider")
     c.config.gd_cookie.from_value("")
+    c.config.use_console.from_value(False)
     return c
 
 
@@ -26,15 +27,18 @@ class TestConfig:
         assert container.config.portal_name() == "linkedin"
         assert container.config.provider_name() == "test_provider"
         assert container.config.gd_cookie() == ""
+        assert container.config.use_console() is False
 
     def test_override_config_after_instantiation(self):
         c = JobSearchContainer()
         c.config.portal_name.from_value("gupy")
         c.config.provider_name.from_value("brasil")
         c.config.gd_cookie.from_value("cookie")
+        c.config.use_console.from_value(True)
         assert c.config.portal_name() == "gupy"
         assert c.config.provider_name() == "brasil"
         assert c.config.gd_cookie() == "cookie"
+        assert c.config.use_console() is True
 
 
 class TestProviders:
@@ -69,10 +73,9 @@ class TestProviders:
         assert isinstance(pool, ProxyFrameworkPool)
 
     def test_proxy_pool_passes_config(self, container: JobSearchContainer):
-        from job_search.infrastructure.config import load_settings
         pool = container.proxy_pool()
         assert pool.provider_name == "test_provider"
-        assert pool.use_console is (load_settings().defaults.silent is False)
+        assert pool.use_console is False
 
 
 class TestAdapterSelector:
@@ -101,6 +104,7 @@ class TestAdapterSelector:
         c.config.portal_name.from_value("gupy")
         c.config.provider_name.from_value("p")
         c.config.gd_cookie.from_value("")
+        c.config.use_console.from_value(False)
         adapter = c.job_board_adapter()
         from job_search.providers.job_boards.gupy import GupyJobBoardAdapter
         assert isinstance(adapter, GupyJobBoardAdapter)
@@ -110,6 +114,7 @@ class TestAdapterSelector:
         c.config.portal_name.from_value("glassdoor")
         c.config.provider_name.from_value("p")
         c.config.gd_cookie.from_value("")
+        c.config.use_console.from_value(False)
         adapter = c.job_board_adapter()
         from job_search.providers.job_boards.glassdoor import GlassdoorJobBoardAdapter
         assert isinstance(adapter, GlassdoorJobBoardAdapter)
@@ -119,6 +124,7 @@ class TestAdapterSelector:
         c.config.portal_name.from_value("unknown_portal")
         c.config.provider_name.from_value("p")
         c.config.gd_cookie.from_value("")
+        c.config.use_console.from_value(False)
         with pytest.raises(errors.Error, match="no .*unknown_portal"):
             c.job_board_adapter()
 
@@ -136,5 +142,8 @@ class TestServiceWiring:
         with container.proxy_pool.override(providers.Factory(lambda: mock_proxy)):
             service = container.job_search_service()
         assert service.adapter is not None
-        assert service.repository is not None
         assert service.view is not None
+        assert service.bridge_search is not None
+        assert service.job_detailing is not None
+        assert service.result_saver is not None
+        assert service.event_reporter is not None

@@ -6,17 +6,18 @@ from loguru import logger
 
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.application.dto.output.search_result import SearchResult
-from job_search.application.events.noop_search_event_publisher import NoopSearchEventPublisher
-from job_search.application.events.search_event import SearchEvent, SearchEventName
-from job_search.application.ports.job_board_adapter import JobBoardAdapter
-from job_search.application.ports.job_filter_repository import JobFilterRepository
-from job_search.application.ports.job_repository import JobRepository
-from job_search.application.ports.job_search_view import JobSearchView
-from job_search.application.ports.proxy_pool import ProxyPool
-from job_search.application.ports.search_event_publisher import SearchEventPublisher
-from job_search.application.service.bridge_search_service import BridgeSearchService
-from job_search.application.service.job_detailing_service import JobDetailingService
-from job_search.application.service.search_result_saver import SearchResultSaver
+from job_search.application.events.search_event import SearchEventName
+from job_search.application.ports import (
+    BridgeSearch,
+    JobBoardAdapter,
+    JobDetailing,
+    JobFilterRepository,
+    JobSearchUseCase,
+    JobSearchView,
+    ProxyPool,
+    SearchEventReporter,
+    SearchResultSaverPort,
+)
 from job_search.domain.detailing import JobDetailingSession
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
@@ -24,25 +25,26 @@ from job_search.domain.proxy import BridgeEndpoint
 from job_search.domain.search_query import SearchQuery
 
 
-class JobSearchService:
+class JobSearchService(JobSearchUseCase):
     def __init__(
         self,
         adapter: JobBoardAdapter,
         proxy_pool: ProxyPool,
-        repository: JobRepository,
         filter_repository: JobFilterRepository,
         view: JobSearchView,
-        event_publisher: SearchEventPublisher | None = None,
+        bridge_search: BridgeSearch,
+        job_detailing: JobDetailing,
+        result_saver: SearchResultSaverPort,
+        event_reporter: SearchEventReporter,
     ) -> None:
         self.adapter = adapter
         self.proxy_pool = proxy_pool
-        self.repository = repository
         self.filter_repository = filter_repository
         self.view = view
-        self.event_publisher = event_publisher or NoopSearchEventPublisher()
-        self.bridge_search = BridgeSearchService(adapter, view, self._publish_event)
-        self.job_detailing = JobDetailingService(adapter, view, self._publish_event)
-        self.result_saver = SearchResultSaver(repository, view, self._publish_event)
+        self.bridge_search = bridge_search
+        self.job_detailing = job_detailing
+        self.result_saver = result_saver
+        self.event_reporter = event_reporter
 
     def run(self, request: JobSearchRequest) -> int:
         log = logger.bind(
@@ -203,5 +205,4 @@ class JobSearchService:
         return filtered_jobs
 
     def _publish_event(self, name: str | SearchEventName, message: str, level: str = "info", **payload) -> None:
-        event_payload = {"portal": self.adapter.name, **payload}
-        self.event_publisher.publish(SearchEvent(name=name, message=message, level=level, payload=event_payload))
+        self.event_reporter.publish(name, message, level=level, **payload)

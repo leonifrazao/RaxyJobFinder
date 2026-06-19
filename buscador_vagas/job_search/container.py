@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from dependency_injector import containers, providers
 
-from job_search.application import JobSearchService
-from job_search.infrastructure.config import load_settings
+from job_search.application import BridgeSearchService, DefaultSearchEventReporter, JobDetailingService, JobSearchService, SearchResultSaver
 from job_search.infrastructure.http.botasaurus_http_client import BotasaurusHttpClient
 from job_search.infrastructure.messaging import build_search_event_publisher
 from job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
@@ -30,7 +29,7 @@ class JobSearchContainer(containers.DeclarativeContainer):
     proxy_pool = providers.Factory(
         ProxyFrameworkPool,
         provider_name=config.provider_name,
-        use_console=load_settings().defaults.silent is False,
+        use_console=config.use_console,
     )
 
     linkedin_adapter = providers.Factory(
@@ -56,12 +55,41 @@ class JobSearchContainer(containers.DeclarativeContainer):
         glassdoor=glassdoor_adapter,
     )
 
+    event_reporter = providers.Factory(
+        DefaultSearchEventReporter,
+        adapter=job_board_adapter,
+        event_publisher=event_publisher,
+    )
+
+    bridge_search = providers.Factory(
+        BridgeSearchService,
+        adapter=job_board_adapter,
+        view=view,
+        event_reporter=event_reporter,
+    )
+
+    job_detailing = providers.Factory(
+        JobDetailingService,
+        adapter=job_board_adapter,
+        view=view,
+        event_reporter=event_reporter,
+    )
+
+    result_saver = providers.Factory(
+        SearchResultSaver,
+        repository=repository,
+        view=view,
+        event_reporter=event_reporter,
+    )
+
     job_search_service = providers.Factory(
         JobSearchService,
         adapter=job_board_adapter,
         proxy_pool=proxy_pool,
-        repository=repository,
         filter_repository=filter_repository,
         view=view,
-        event_publisher=event_publisher,
+        bridge_search=bridge_search,
+        job_detailing=job_detailing,
+        result_saver=result_saver,
+        event_reporter=event_reporter,
     )

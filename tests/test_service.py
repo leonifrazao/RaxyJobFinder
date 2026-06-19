@@ -7,7 +7,11 @@ import pytest
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.application.dto.output.http_response import HttpResponse
 from job_search.application.dto.output.search_result import SearchResult
+from job_search.application.service.bridge_search_service import BridgeSearchService
+from job_search.application.service.job_detailing_service import JobDetailingService
 from job_search.application.service.job_search_service import JobSearchService
+from job_search.application.service.search_event_reporter import DefaultSearchEventReporter
+from job_search.application.service.search_result_saver import SearchResultSaver
 from job_search.domain.job_details import JobDetails
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
@@ -49,7 +53,7 @@ def mock_view():
 
 @pytest.fixture
 def service(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view):
-    return JobSearchService(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view)
+    return build_service(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view)
 
 
 class FakeEventPublisher:
@@ -58,6 +62,20 @@ class FakeEventPublisher:
 
     def publish(self, event) -> None:
         self.events.append(event)
+
+
+def build_service(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, publisher=None):
+    reporter = DefaultSearchEventReporter(mock_adapter, publisher)
+    return JobSearchService(
+        adapter=mock_adapter,
+        proxy_pool=mock_proxy_pool,
+        filter_repository=mock_filter_repository,
+        view=mock_view,
+        bridge_search=BridgeSearchService(mock_adapter, mock_view, reporter),
+        job_detailing=JobDetailingService(mock_adapter, mock_view, reporter),
+        result_saver=SearchResultSaver(mock_repository, mock_view, reporter),
+        event_reporter=reporter,
+    )
 
 
 @pytest.fixture
@@ -122,7 +140,7 @@ class TestJobSearchService:
 
     def test_run_publishes_events(self, mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, sample_request):
         publisher = FakeEventPublisher()
-        service = JobSearchService(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, publisher)
+        service = build_service(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, publisher)
         mock_adapter.get_location_options.return_value = []
         mock_adapter.search_jobs.return_value = SearchResult(
             query=SearchQuery("Python", "Brasil"),

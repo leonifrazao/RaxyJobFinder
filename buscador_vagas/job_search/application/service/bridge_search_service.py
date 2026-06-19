@@ -1,28 +1,23 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
-
 from loguru import logger
 
+from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.application.dto.output.search_result import SearchResult
 from job_search.application.events.search_event import SearchEventName
-from job_search.application.ports.job_board_adapter import JobBoardAdapter
-from job_search.application.ports.job_search_view import JobSearchView
+from job_search.application.ports import BridgeSearch, JobBoardAdapter, JobSearchView, SearchEventReporter
 from job_search.domain.proxy import BridgeEndpoint
 from job_search.domain.search_query import SearchQuery
 from job_search.domain.text import clean_text
 
-PublishEvent = Callable[..., None]
 
-
-class BridgeSearchService:
-    def __init__(self, adapter: JobBoardAdapter, view: JobSearchView, publish_event: PublishEvent) -> None:
+class BridgeSearchService(BridgeSearch):
+    def __init__(self, adapter: JobBoardAdapter, view: JobSearchView, event_reporter: SearchEventReporter) -> None:
         self.adapter = adapter
         self.view = view
-        self._publish_event = publish_event
+        self.event_reporter = event_reporter
 
-    def resolve_location(self, query: SearchQuery, bridges: list[BridgeEndpoint], request: Any) -> SearchQuery:
+    def resolve_location(self, query: SearchQuery, bridges: list[BridgeEndpoint], request: JobSearchRequest) -> SearchQuery:
         if query.location_id:
             return query
         if not clean_text(query.location):
@@ -37,7 +32,7 @@ class BridgeSearchService:
                     bridge_index=bridge.index,
                     error=str(exc),
                 ).warning("location_typeahead_failed")
-                self._publish_event(
+                self.event_reporter.publish(
                     SearchEventName.LOCATION_TYPEAHEAD_FAILED,
                     f"Typeahead falhou na bridge {bridge.index}",
                     level="warning",
@@ -53,7 +48,7 @@ class BridgeSearchService:
                 location_id=selected.id,
                 location_name=selected.name,
             ).info("location_resolved")
-            self._publish_event(
+            self.event_reporter.publish(
                 SearchEventName.LOCATION_RESOLVED,
                 f"Localizacao selecionada: {selected.name}",
                 location_id=selected.id,
@@ -76,7 +71,7 @@ class BridgeSearchService:
                 portal=self.adapter.name,
                 bridge_index=bridge.index,
             ).info("search_bridge_attempt")
-            self._publish_event(SearchEventName.SEARCH_BRIDGE_ATTEMPT, f"Testando bridge {bridge.index}", bridge_index=bridge.index)
+            self.event_reporter.publish(SearchEventName.SEARCH_BRIDGE_ATTEMPT, f"Testando bridge {bridge.index}", bridge_index=bridge.index)
             self.view.info(f"[bold]Testando {self.adapter.name} via bridge {bridge.index}:[/] {bridge.url}")
             try:
                 result = self.adapter.search_jobs(bridge.url, query, timeout, max_jobs=max_jobs, start=start)
@@ -87,7 +82,7 @@ class BridgeSearchService:
                     bridge_index=bridge.index,
                     error=str(exc),
                 ).warning("search_bridge_failed")
-                self._publish_event(
+                self.event_reporter.publish(
                     SearchEventName.SEARCH_BRIDGE_FAILED,
                     f"Bridge {bridge.index} falhou na busca",
                     level="warning",
@@ -105,7 +100,7 @@ class BridgeSearchService:
                 jobs_count=len(result.jobs),
                 url=result.response.url,
             ).info("search_bridge_succeeded")
-            self._publish_event(
+            self.event_reporter.publish(
                 SearchEventName.SEARCH_BRIDGE_SUCCEEDED,
                 f"Bridge {bridge.index} retornou {len(result.jobs)} vagas",
                 bridge_index=bridge.index,
