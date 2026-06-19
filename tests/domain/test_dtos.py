@@ -2,17 +2,15 @@ from __future__ import annotations
 
 import pytest
 
-from job_search.domain.dtos import (
-    BridgeEndpoint,
-    HttpResponse,
-    JobDetails,
-    JobPosting,
-    JobSummary,
-    LocationOption,
-    SearchQuery,
-    SearchResult,
-    _clean,
-)
+from job_search.application.dto.output.http_response import HttpResponse
+from job_search.application.dto.output.search_result import SearchResult
+from job_search.domain.job_details import JobDetails
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
+from job_search.domain.location_option import LocationOption
+from job_search.domain.proxy import BridgeEndpoint
+from job_search.domain.search_query import SearchQuery
+from job_search.domain.text import clean_text as _clean
 
 
 class TestClean:

@@ -3,8 +3,13 @@ from __future__ import annotations
 import json
 from urllib.parse import urlencode
 
-from job_search.domain.dtos import HttpResponse, JobDetails, JobSummary, LocationOption, SearchQuery, SearchResult
-from job_search.domain.ports import HttpClient
+from job_search.application.dto.output.http_response import HttpResponse
+from job_search.application.dto.output.search_result import SearchResult
+from job_search.application.ports.http_client import HttpClient
+from job_search.domain.job_details import JobDetails
+from job_search.domain.job_summary import JobSummary
+from job_search.domain.location_option import LocationOption
+from job_search.domain.search_query import SearchQuery
 
 
 GUPY_BASE_URL = "https://employability-portal.gupy.io/api/v1/jobs"

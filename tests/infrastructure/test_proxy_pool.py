@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from job_search.domain.dtos import BridgeEndpoint
+from job_search.domain.proxy import BridgeEndpoint
 from job_search.infrastructure.proxy_pool import ProxyFrameworkPool
 
 

@@ -4,16 +4,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from job_search.domain.dtos import (
-    BridgeEndpoint,
-    HttpResponse,
-    JobDetails,
-    JobPosting,
-    JobSummary,
-    SearchQuery,
-    SearchResult,
-)
-from job_search.service.job_search_service import JobSearchRequest, JobSearchService
+from job_search.application.dto.input.job_search_request import JobSearchRequest
+from job_search.application.dto.output.http_response import HttpResponse
+from job_search.application.dto.output.search_result import SearchResult
+from job_search.application.job_search_service import JobSearchService
+from job_search.domain.job_details import JobDetails
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
+from job_search.domain.proxy import BridgeEndpoint
+from job_search.domain.search_query import SearchQuery
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.container import JobSearchContainer
 from job_search.proxy_sources import (
     ALL_COUNTRY_FILES,
@@ -11,7 +12,6 @@ from job_search.proxy_sources import (
     SPLITTED_BY_COUNTRY_BASE,
     resolve_proxy_sources,
 )
-from job_search.service import JobSearchRequest
 
 
 def build_parser() -> argparse.ArgumentParser:

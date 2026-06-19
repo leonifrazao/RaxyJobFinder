@@ -4,7 +4,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from job_search.domain.dtos import JobDetails, JobPosting, JobSummary, LocationOption
+from job_search.domain.job_details import JobDetails
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
+from job_search.domain.location_option import LocationOption
 from job_search.view.rich_view import RichJobSearchView
 
 

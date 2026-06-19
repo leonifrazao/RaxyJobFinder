@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from job_search.domain.dtos import JobDetails, JobPosting, JobSummary
-from job_search.domain.filters import JobFilterSet
+from job_search.domain.filtering import JobFilterSet
+from job_search.domain.job_details import JobDetails
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
 
 
 @pytest.fixture

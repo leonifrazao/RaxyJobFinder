@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from job_search.domain.dtos import BridgeEndpoint
+from job_search.domain.proxy import BridgeEndpoint
 
 try:
     from src import create_proxy

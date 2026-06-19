@@ -9,7 +9,7 @@ from job_search.infrastructure.proxy_pool import ProxyFrameworkPool
 from job_search.modules.glassdoor import GlassdoorJobBoardAdapter
 from job_search.modules.gupy import GupyJobBoardAdapter
 from job_search.modules.linkedin import LinkedInJobBoardAdapter
-from job_search.service import JobSearchService
+from job_search.application import JobSearchService
 from job_search.view import RichJobSearchView
 
 

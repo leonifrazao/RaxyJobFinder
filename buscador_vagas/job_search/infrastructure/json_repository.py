@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from job_search.domain.dtos import JobPosting, JobSummary
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
 
 
 class JsonJobRepository:

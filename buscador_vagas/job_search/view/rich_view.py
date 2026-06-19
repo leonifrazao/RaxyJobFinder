@@ -4,7 +4,9 @@ from rich.console import Console
 from rich.prompt import IntPrompt
 from rich.table import Table
 
-from job_search.domain.dtos import JobPosting, JobSummary, LocationOption
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
+from job_search.domain.location_option import LocationOption
 
 
 class RichJobSearchView:

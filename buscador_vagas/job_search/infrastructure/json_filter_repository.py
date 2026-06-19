@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from job_search.domain.filters import JobFilterSet
+from job_search.domain.filtering import JobFilterSet
 
 
 class JsonJobFilterRepository:

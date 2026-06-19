@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from .dtos import JobPosting
+from .job_posting import JobPosting
 
 
 @dataclass(frozen=True)

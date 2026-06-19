@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from job_search.domain.dtos import BridgeEndpoint, HttpResponse, JobDetails, JobSummary
-from job_search.domain.entities import JobDetailingSession
+from job_search.domain.detailing import JobDetailingSession
+from job_search.domain.job_details import JobDetails
+from job_search.domain.job_summary import JobSummary
+from job_search.domain.proxy import BridgeEndpoint
 
 
 @pytest.fixture
@@ -92,9 +94,14 @@ class TestJobDetailingSession:
     def test_successful_detail(self, bridges):
         job = JobSummary("linkedin", "e1", "Dev")
         details = JobDetails(title="Dev Senior")
-        response = HttpResponse(200, "http://url", {}, "some html body")
         s = JobDetailingSession(jobs=[], bridges=bridges, jobs_per_proxy=5)
-        p = s.successful_detail(job, details, response, bridges[0])
+        p = s.successful_detail(
+            job,
+            details,
+            status_code=200,
+            html_size=len("some html body"),
+            bridge=bridges[0],
+        )
         assert p.summary is job
         assert p.details is details
         assert p.detail_status_code == 200

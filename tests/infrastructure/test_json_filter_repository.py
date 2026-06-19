@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from job_search.domain.filters import JobFilterSet
+from job_search.domain.filtering import JobFilterSet
 from job_search.infrastructure.json_filter_repository import JsonJobFilterRepository
 
 

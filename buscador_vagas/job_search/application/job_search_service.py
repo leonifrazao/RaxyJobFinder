@@ -1,34 +1,19 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
 
-from job_search.domain.dtos import BridgeEndpoint, JobPosting, JobSummary, SearchQuery, _clean
-from job_search.domain.entities import JobDetailingSession
-from job_search.domain.ports import JobBoardAdapter, JobFilterRepository, JobRepository, JobSearchView, ProxyPool
-
-
-@dataclass(frozen=True)
-class JobSearchRequest:
-    proxy_sources: list[str]
-    keywords: str
-    location: str
-    location_id: str | None
-    location_choice: int | None
-    valid_count: int
-    jobs_per_proxy: int
-    max_count: int
-    threads: int
-    timeout: float
-    detail_timeout: float
-    jobs_output: str
-    details_output: str
-    filters_path: str | None
-    details_limit: int
-    show_jobs: int
-    start: int = 0
-    max_jobs: int = 0
-    detail_threads: int = 5
+from job_search.application.dto.input.job_search_request import JobSearchRequest
+from job_search.application.ports.job_board_adapter import JobBoardAdapter
+from job_search.application.ports.job_filter_repository import JobFilterRepository
+from job_search.application.ports.job_repository import JobRepository
+from job_search.application.ports.job_search_view import JobSearchView
+from job_search.application.ports.proxy_pool import ProxyPool
+from job_search.domain.detailing import JobDetailingSession
+from job_search.domain.job_posting import JobPosting
+from job_search.domain.job_summary import JobSummary
+from job_search.domain.proxy import BridgeEndpoint
+from job_search.domain.search_query import SearchQuery
+from job_search.domain.text import clean_text
 
 
 class JobSearchService:
@@ -92,7 +77,7 @@ class JobSearchService:
     def _resolve_location(self, query: SearchQuery, bridges: list[BridgeEndpoint], request: JobSearchRequest) -> SearchQuery:
         if query.location_id:
             return query
-        if not _clean(query.location):
+        if not clean_text(query.location):
             return query
         for bridge in bridges:
             try:
@@ -160,7 +145,13 @@ class JobSearchService:
         for bridge in session.bridge_candidates_for(job_offset):
             try:
                 details, response = self.adapter.fetch_job_details(bridge.url, job, search_url, detail_timeout)
-                return session.successful_detail(job, details, response, bridge)
+                return session.successful_detail(
+                    job,
+                    details,
+                    status_code=response.status_code,
+                    html_size=len(response.text),
+                    bridge=bridge,
+                )
             except Exception as exc:
                 last_error = str(exc)
                 session.mark_bridge_failed(bridge)

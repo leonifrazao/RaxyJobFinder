@@ -1,10 +1,15 @@
-from .dtos import BridgeEndpoint, HttpResponse, JobDetails, JobPosting, JobSummary, LocationOption, SearchQuery, SearchResult
-from .entities import JobDetailingSession
-from .filters import JobFilterSet
+from .detailing import JobDetailingSession
+from .filtering import JobFilterSet
+from .job_details import JobDetails
+from .job_posting import JobPosting
+from .job_summary import JobSummary
+from .location_option import LocationOption
+from .proxy import BridgeEndpoint
+from .search_query import SearchQuery
+from .text import clean_text
 
 __all__ = [
     "BridgeEndpoint",
-    "HttpResponse",
     "JobDetailingSession",
     "JobFilterSet",
     "JobDetails",
@@ -12,5 +17,5 @@ __all__ = [
     "JobSummary",
     "LocationOption",
     "SearchQuery",
-    "SearchResult",
+    "clean_text",
 ]

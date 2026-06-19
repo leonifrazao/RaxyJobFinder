@@ -3,7 +3,10 @@ from __future__ import annotations
 import threading
 from dataclasses import dataclass, field
 
-from .dtos import BridgeEndpoint, HttpResponse, JobDetails, JobPosting, JobSummary
+from .job_details import JobDetails
+from .job_posting import JobPosting
+from .job_summary import JobSummary
+from .proxy import BridgeEndpoint
 
 
 @dataclass
@@ -48,12 +51,20 @@ class JobDetailingSession:
     def missing_external_id(self, job: JobSummary) -> JobPosting:
         return JobPosting(summary=job, detail_error="job_id ausente")
 
-    def successful_detail(self, job: JobSummary, details: JobDetails, response: HttpResponse, bridge: BridgeEndpoint) -> JobPosting:
+    def successful_detail(
+        self,
+        job: JobSummary,
+        details: JobDetails,
+        *,
+        status_code: int | None,
+        html_size: int,
+        bridge: BridgeEndpoint,
+    ) -> JobPosting:
         return JobPosting(
             summary=job,
             details=details,
-            detail_status_code=response.status_code,
-            detail_html_size=len(response.text),
+            detail_status_code=status_code,
+            detail_html_size=html_size,
             detail_bridge_index=bridge.index,
         )
 

@@ -4,7 +4,7 @@ from typing import Any
 
 from botasaurus.request import Request, request as botasaurus_request
 
-from job_search.domain.dtos import HttpResponse
+from job_search.application.dto.output.http_response import HttpResponse
 
 
 class BotasaurusHttpClient:

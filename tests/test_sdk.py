@@ -15,7 +15,7 @@ from buscador_vagas import (
     LocationOption,
     SilentView,
 )
-from buscador_vagas.job_search.service import JobSearchRequest
+from buscador_vagas.job_search.application.dto.input.job_search_request import JobSearchRequest
 
 
 @pytest.fixture

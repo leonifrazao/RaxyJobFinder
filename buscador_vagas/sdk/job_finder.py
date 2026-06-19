@@ -1,58 +1,12 @@
 from __future__ import annotations
 
-from .job_search.domain import JobPosting, JobSummary, LocationOption
-from .job_search.domain.filters import JobFilterSet
-from .job_search.proxy_sources import DEFAULT_PROVIDER, resolve_proxy_sources
-
-
-class SilentView:
-    def info(self, message: str) -> None:
-        pass
-
-    def warn(self, message: str) -> None:
-        pass
-
-    def error(self, message: str) -> None:
-        pass
-
-    def choose_location(self, options: list[LocationOption], selected_index: int | None) -> LocationOption:
-        if not options:
-            raise RuntimeError("Nenhuma localizacao retornada pelo portal.")
-        index = (selected_index or 1) - 1
-        return options[max(0, min(index, len(options) - 1))]
-
-    def show_jobs(self, jobs: list[JobSummary], limit: int) -> None:
-        pass
-
-    def show_job_details(self, jobs: list[JobPosting], limit: int) -> None:
-        pass
-
-
-class InMemoryRepository:
-    def __init__(self) -> None:
-        self.summaries: list[JobSummary] = []
-        self.postings: list[JobPosting] = []
-
-    def save_raw(self, output_path: str, text: str) -> None:
-        pass
-
-    def save_jobs(self, output_path: str, jobs: list[JobPosting] | list[JobSummary]) -> None:
-        if jobs and isinstance(jobs[0], JobPosting):
-            self.postings = list(jobs)
-        else:
-            self.summaries = list(jobs)
-
-
-class _CustomFilterRepository:
-    def __init__(self, filter_set: JobFilterSet | None = None) -> None:
-        self.filter_set = filter_set
-
-    def load(self, filter_path: str | None) -> JobFilterSet:
-        if self.filter_set is not None:
-            return self.filter_set
-        from .job_search.infrastructure.json_filter_repository import JsonJobFilterRepository
-
-        return JsonJobFilterRepository().load(filter_path)
+from buscador_vagas.job_search.application.dto.input.job_search_request import JobSearchRequest
+from buscador_vagas.job_search.domain.filtering import JobFilterSet
+from buscador_vagas.job_search.domain.job_posting import JobPosting
+from buscador_vagas.job_search.proxy_sources import DEFAULT_PROVIDER, resolve_proxy_sources
+from buscador_vagas.sdk.custom_filter_repository import _CustomFilterRepository
+from buscador_vagas.sdk.in_memory_repository import InMemoryRepository
+from buscador_vagas.sdk.silent_view import SilentView
 
 
 class JobFinder:
@@ -85,8 +39,8 @@ class JobFinder:
     ):
         from dependency_injector import providers
 
-        from .job_search.container import JobSearchContainer
-        from .job_search.infrastructure.proxy_pool import ProxyFrameworkPool
+        from buscador_vagas.job_search.container import JobSearchContainer
+        from buscador_vagas.job_search.infrastructure.proxy_pool import ProxyFrameworkPool
 
         if portal not in self.PORTALS:
             raise ValueError(
@@ -155,8 +109,6 @@ class JobFinder:
         details_output: str | None = None,
         filters: JobFilterSet | str | None = None,
     ) -> list[JobPosting]:
-        from .job_search.service import JobSearchRequest
-
         if isinstance(filters, JobFilterSet):
             self._filter_repo.filter_set = filters
             effective_filters_path: str | None = None
