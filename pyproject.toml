@@ -26,3 +26,4 @@ include = ["job_search*", "src*", "buscador_vagas*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["buscador_vagas"]
