@@ -76,15 +76,70 @@ class TestSaveJobs:
         repo.save_jobs(output, [])
         assert (tmp_path / "x" / "y" / "vagas.json").exists()
 
-    def test_includes_provider_data(self, repo: JsonJobRepository, tmp_path: pytest.TempPathFactory):
+    def test_omits_provider_specific_data(self, repo: JsonJobRepository, tmp_path: pytest.TempPathFactory):
         jobs = [
             JobSummary(
                 provider="glassdoor", external_id="g1", title="Designer",
-                provider_data={"rating": 4.5, "reviews": 10},
+                provider_data={"modalidade": "remoto", "rating": 4.5, "reviews": 10},
             ),
         ]
         output = str(tmp_path / "with_extra.json")
         repo.save_jobs(output, jobs)
         data = json.loads((tmp_path / "with_extra.json").read_text(encoding="utf-8"))
-        assert data[0]["rating"] == 4.5
-        assert data[0]["reviews"] == 10
+        assert data[0]["modalidade"] == "remoto"
+        assert data[0]["provider_data"]["rating"] == 4.5
+        assert data[0]["provider_data"]["reviews"] == 10
+
+    def test_posting_uses_shared_detail_schema(self, repo: JsonJobRepository, tmp_path: pytest.TempPathFactory):
+        jobs = [
+            JobPosting(
+                summary=JobSummary(
+                    provider="gupy",
+                    external_id="10",
+                    title="Analista",
+                    provider_data={"modalidade": "híbrido", "workplaceType": "hybrid"},
+                ),
+                details=JobDetails(
+                    title="Analista Senior",
+                    description="...",
+                    provider_data={"id": 10},
+                ),
+                detail_status_code=200,
+            ),
+        ]
+        output = str(tmp_path / "postings.json")
+        repo.save_jobs(output, jobs)
+
+        data = json.loads((tmp_path / "postings.json").read_text(encoding="utf-8"))
+        assert list(data[0]) == [
+            "provider",
+            "job_id",
+            "title",
+            "company",
+            "location",
+            "listed_at",
+            "listed_text",
+            "url",
+            "company_url",
+            "logo_url",
+            "modalidade",
+            "detail_title",
+            "detail_company",
+            "detail_company_url",
+            "detail_location",
+            "detail_posted_text",
+            "detail_applicants_text",
+            "description",
+            "criteria",
+            "apply_text",
+            "detail_url",
+            "detail_logo_url",
+            "detail_status_code",
+            "detail_html_size",
+            "detail_bridge_index",
+            "provider_data",
+        ]
+        assert data[0]["modalidade"] == "híbrido"
+        assert data[0]["detail_title"] == "Analista Senior"
+        assert data[0]["provider_data"]["workplaceType"] == "hybrid"
+        assert data[0]["provider_data"]["id"] == 10

@@ -116,26 +116,29 @@ class LinkedInJobBoardAdapter:
             raise RuntimeError(f"status HTTP inesperado: {response.status_code}")
         all_jobs = self._parse_jobs_from_html(response.text)
 
-        if max_jobs > 0 and len(all_jobs) < max_jobs:
-            step = 60
-            offset = max(start, len(all_jobs))
-            api_headers = self._api_headers(search_url)
-            while len(all_jobs) < max_jobs:
-                try:
-                    page_resp = self.http_client.get(bridge_url, self._build_see_more_url(query, offset), timeout, headers=api_headers)
-                    if page_resp.status_code != 200 or not page_resp.text.strip():
+        if max_jobs > 0:
+            if len(all_jobs) >= max_jobs:
+                all_jobs = all_jobs[:max_jobs]
+            else:
+                step = 60
+                offset = max(start, len(all_jobs))
+                api_headers = self._api_headers(search_url)
+                while len(all_jobs) < max_jobs:
+                    try:
+                        page_resp = self.http_client.get(bridge_url, self._build_see_more_url(query, offset), timeout, headers=api_headers)
+                        if page_resp.status_code != 200 or not page_resp.text.strip():
+                            break
+                        page_jobs = self._parse_jobs_from_api(page_resp.text)
+                        if not page_jobs:
+                            break
+                        existing_ids = {j.external_id for j in all_jobs}
+                        new_jobs = [j for j in page_jobs if j.external_id not in existing_ids]
+                        if not new_jobs:
+                            break
+                        all_jobs.extend(new_jobs)
+                        offset += step
+                    except Exception:
                         break
-                    page_jobs = self._parse_jobs_from_api(page_resp.text)
-                    if not page_jobs:
-                        break
-                    existing_ids = {j.external_id for j in all_jobs}
-                    new_jobs = [j for j in page_jobs if j.external_id not in existing_ids]
-                    if not new_jobs:
-                        break
-                    all_jobs.extend(new_jobs)
-                    offset += step
-                except Exception:
-                    break
             all_jobs = all_jobs[:max_jobs]
 
         return SearchResult(query=query, search_url=search_url, response=response, jobs=all_jobs)

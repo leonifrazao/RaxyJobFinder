@@ -207,6 +207,37 @@ class TestJobSearchService:
         assert result[0] is posting
         assert result[0].to_dict()["modalidade"] == "presencial"
 
+    def test_with_modalidade_infers_remote_from_location(self, service):
+        posting = JobPosting(summary=JobSummary("glassdoor", "e1", "Dev", location="Trabalho remoto"))
+
+        result = service._with_modalidade([posting], "normal")
+
+        assert result[0].to_dict()["modalidade"] == "remoto"
+
+    def test_with_modalidade_infers_hybrid_from_provider_data(self, service):
+        posting = JobPosting(
+            summary=JobSummary(
+                "gupy",
+                "e1",
+                "Dev",
+                provider_data={"workplaceType": "hybrid", "isRemoteWork": False},
+            )
+        )
+
+        result = service._with_modalidade([posting], "normal")
+
+        assert result[0].to_dict()["modalidade"] == "híbrido"
+
+    def test_with_modalidade_infers_remote_from_criteria(self, service):
+        posting = JobPosting(
+            summary=JobSummary("gupy", "e1", "Dev"),
+            details=JobDetails(criteria={"Remoto": "Sim"}),
+        )
+
+        result = service._with_modalidade([posting], "normal")
+
+        assert result[0].to_dict()["modalidade"] == "remoto"
+
     @pytest.mark.parametrize(
         ("work_type", "expected"),
         [

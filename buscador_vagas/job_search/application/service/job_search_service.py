@@ -173,16 +173,61 @@ class JobSearchService(JobSearchUseCase):
         return self.job_detailing.enrich_jobs(jobs, bridges, search_url, request)
 
     def _with_modalidade(self, jobs: list[JobPosting], work_type: str | None) -> list[JobPosting]:
-        modalidade = self._normalize_modalidade(work_type)
+        default_modalidade = self._normalize_modalidade(work_type)
         enriched_jobs: list[JobPosting] = []
         for job in jobs:
             if "modalidade" in job.summary.provider_data:
                 enriched_jobs.append(job)
                 continue
+            modalidade = self._infer_modalidade(job) or default_modalidade
             provider_data = {**job.summary.provider_data, "modalidade": modalidade}
             summary = replace(job.summary, provider_data=provider_data)
             enriched_jobs.append(replace(job, summary=summary))
         return enriched_jobs
+
+    def _infer_modalidade(self, job: JobPosting) -> str | None:
+        workplace_type = job.summary.provider_data.get("workplaceType") or job.summary.provider_data.get("workplace_type")
+        modalidade = self._classify_modalidade_text(workplace_type)
+        if modalidade:
+            return modalidade
+        if job.summary.provider_data.get("isRemoteWork") is True:
+            return "remoto"
+        if job.details:
+            modalidade = self._infer_modalidade_from_criteria(job.details.criteria)
+            if modalidade:
+                return modalidade
+        text_parts = [job.summary.location]
+        if job.details:
+            text_parts.append(job.details.location)
+        return self._classify_modalidade_text(" ".join(text_parts))
+
+    def _infer_modalidade_from_criteria(self, criteria: dict[str, str]) -> str | None:
+        for key, value in criteria.items():
+            key_value = key.strip().casefold()
+            value_text = str(value).strip()
+            value_key = value_text.casefold()
+            if key_value == "remoto":
+                if value_key in {"sim", "yes", "true"}:
+                    return "remoto"
+                continue
+            if key_value in {"trabalho", "modalidade", "workplace", "workplace type"}:
+                modalidade = self._classify_modalidade_text(value_text)
+                if modalidade:
+                    return modalidade
+        return None
+
+    @staticmethod
+    def _classify_modalidade_text(text: object) -> str | None:
+        if text is None:
+            return None
+        value = str(text).strip().casefold()
+        if not value:
+            return None
+        if any(token in value for token in ("hybrid", "hibrido", "híbrido")):
+            return "híbrido"
+        if any(token in value for token in ("remote", "remoto", "home office", "teletrabalho")):
+            return "remoto"
+        return None
 
     @staticmethod
     def _normalize_modalidade(work_type: str | None) -> str:

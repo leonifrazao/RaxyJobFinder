@@ -310,6 +310,18 @@ class TestSearchJobs:
         with pytest.raises(RuntimeError, match="status HTTP"):
             adapter.search_jobs("http://bridge:8080", q, 10.0)
 
+    def test_limits_jobs_from_first_page(self, adapter: LinkedInJobBoardAdapter):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.text = SAMPLE_CARD_HTML * 3
+        adapter.http_client.get.return_value = mock_response
+
+        q = SearchQuery(keywords="engenheiro", location="SP")
+        result = adapter.search_jobs("http://bridge:8080", q, 10.0, max_jobs=1)
+
+        assert len(result.jobs) == 1
+        adapter.http_client.get.assert_called_once()
+
     def test_pagination_when_max_jobs_exceeds(self, adapter: LinkedInJobBoardAdapter):
         api_card = """
         <div class="base-card job-search-card" data-entity-urn="urn:li:jobPosting:99999">
