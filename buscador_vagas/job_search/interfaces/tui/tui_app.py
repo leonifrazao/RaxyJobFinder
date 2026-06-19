@@ -6,6 +6,7 @@ import threading
 import pytermgui as ptg
 from loguru import logger
 
+from job_search.application.events import SearchEventName
 from job_search.infrastructure.config import load_settings
 from job_search.infrastructure.logging import resolve_error_log_path
 from job_search.infrastructure.messaging.redis_search_event_subscriber import RedisSearchEventSubscriber
@@ -186,60 +187,60 @@ class TuiApp:
         error = payload.get("error") or ""
 
         if name.startswith("proxy_"):
-            if name == "proxy_prepare_started":
+            if name == SearchEventName.PROXY_PREPARE_STARTED.value:
                 self._set_proxy("[yellow]baixando proxies...[/]")
-            elif name == "proxy_testing":
+            elif name == SearchEventName.PROXY_TESTING.value:
                 self._set_proxy("[yellow]testando proxies...[/]")
-            elif name == "proxy_tested":
+            elif name == SearchEventName.PROXY_TESTED.value:
                 w = payload.get("working", 0)
                 t = payload.get("total", 0)
                 self._set_proxy(f"[green]{w}/{t} OK[/], [yellow]iniciando bridges...[/]")
-            elif name == "proxy_verifying":
+            elif name == SearchEventName.PROXY_VERIFYING.value:
                 self._set_proxy(f"[yellow]verificando bridges...[/]")
-            elif name == "proxy_bridge_verified":
+            elif name == SearchEventName.PROXY_BRIDGE_VERIFIED.value:
                 idx = payload.get("index", 0)
                 total = payload.get("total", 0)
                 self._set_proxy(f"[green]bridge {idx}/{total} OK[/]")
-            elif name == "proxy_bridge_failed":
+            elif name == SearchEventName.PROXY_BRIDGE_FAILED.value:
                 idx = payload.get("index", 0)
                 total = payload.get("total", 0)
                 self._set_proxy(f"[red]bridge {idx}/{total} falhou[/]")
-            elif name == "proxy_no_working":
+            elif name == SearchEventName.PROXY_NO_WORKING.value:
                 self._set_proxy("[red]nenhuma proxy funcional![/]")
-            elif name == "proxy_prepare_finished":
+            elif name == SearchEventName.PROXY_PREPARE_FINISHED.value:
                 bridges = payload.get("bridges", 0)
                 self._set_proxy(f"[green]{bridges} bridges ativas[/]")
 
         elif name.startswith("search_"):
-            if name == "search_bridge_attempt":
+            if name == SearchEventName.SEARCH_BRIDGE_ATTEMPT.value:
                 self._set_search("[yellow]buscando vagas...[/]")
-            elif name == "search_bridge_succeeded":
+            elif name == SearchEventName.SEARCH_BRIDGE_SUCCEEDED.value:
                 jobs = payload.get("jobs_count", 0)
                 status = payload.get("status_code", 0)
                 self._set_search(f"[green]{jobs} vagas encontradas[/] (HTTP {status})")
-            elif name == "search_bridge_failed":
+            elif name == SearchEventName.SEARCH_BRIDGE_FAILED.value:
                 self._set_search(f"[red]falha na busca[/]")
 
-        elif name == "detail_started":
+        elif name == SearchEventName.DETAIL_STARTED.value:
             total = payload.get("total", 0)
             self._set_detail(f"[yellow]detalhando 0/{total}...[/]")
             self._detail_total = total
-        elif name == "detail_progress":
+        elif name == SearchEventName.DETAIL_PROGRESS.value:
             done = payload.get("done", 0)
             total = payload.get("total", 0)
             ok = payload.get("ok", 0)
             self._set_detail(f"[yellow]{done}/{total}[/] ([green]{ok} OK[/])")
-        elif name == "detail_failed":
+        elif name == SearchEventName.DETAIL_FAILED.value:
             self._set_detail(f"[red]{message}[/]")
 
-        elif name == "save_started":
+        elif name == SearchEventName.SAVE_STARTED.value:
             self._set_save("[yellow]salvando vagas...[/]")
-        elif name == "save_details_started":
+        elif name == SearchEventName.SAVE_DETAILS_STARTED.value:
             self._set_save("[yellow]salvando detalhes...[/]")
-        elif name == "save_finished":
+        elif name == SearchEventName.SAVE_FINISHED.value:
             self._set_save("[green]resultados salvos[/]")
 
-        elif name == "job_search_finished":
+        elif name == SearchEventName.JOB_SEARCH_FINISHED.value:
             jobs = payload.get("jobs_detailed", 0)
             self._set_detail(f"[green]{jobs} vagas detalhadas[/]")
 

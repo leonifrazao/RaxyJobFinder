@@ -6,7 +6,7 @@ from loguru import logger
 from redis import Redis
 from redis.exceptions import RedisError
 
-from job_search.application.events.search_event import SearchEvent
+from job_search.application.events.search_event import SearchEvent, SearchEventName
 
 
 class RedisSearchEventPublisher:
@@ -27,7 +27,8 @@ class RedisSearchEventPublisher:
         try:
             self._client.publish(self.channel, json.dumps(event.to_dict(), ensure_ascii=False))
 
-            if self.data_channel and event.name == "search_data":
+            event_name = event.name.value if isinstance(event.name, SearchEventName) else event.name
+            if self.data_channel and event_name == SearchEventName.SEARCH_DATA.value:
                 payload = event.payload
                 resultado_final = {
                     "portal": payload.get("portal", "unknown"),

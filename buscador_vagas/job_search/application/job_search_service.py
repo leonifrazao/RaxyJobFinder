@@ -6,7 +6,7 @@ from loguru import logger
 
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.application.events.noop_search_event_publisher import NoopSearchEventPublisher
-from job_search.application.events.search_event import SearchEvent
+from job_search.application.events.search_event import SearchEvent, SearchEventName
 from job_search.application.ports.job_board_adapter import JobBoardAdapter
 from job_search.application.ports.job_filter_repository import JobFilterRepository
 from job_search.application.ports.job_repository import JobRepository
@@ -48,7 +48,7 @@ class JobSearchService:
         )
         log.info("job_search_started")
         self._publish_event(
-            "job_search_started",
+            SearchEventName.JOB_SEARCH_STARTED,
             f"Busca iniciada em {self.adapter.name}",
             keywords=request.keywords,
             location=request.location,
@@ -61,30 +61,30 @@ class JobSearchService:
             result = self._search_with_first_working_bridge(query, bridges, request.timeout, request.max_jobs, request.start)
             if result is None:
                 log.warning("job_search_no_working_bridge")
-                self._publish_event("job_search_no_working_bridge", "Nenhuma bridge retornou resposta", level="warning")
+                self._publish_event(SearchEventName.JOB_SEARCH_NO_WORKING_BRIDGE, "Nenhuma bridge retornou resposta", level="warning")
                 self.view.error("Nenhuma bridge conseguiu retornar resposta do portal.")
                 return 1
 
             if not result.jobs:
                 log.bind(search_url=result.search_url).warning("job_search_no_jobs")
-                self._publish_event("job_search_no_jobs", "Nenhuma vaga encontrada", level="warning", search_url=result.search_url)
+                self._publish_event(SearchEventName.JOB_SEARCH_NO_JOBS, "Nenhuma vaga encontrada", level="warning", search_url=result.search_url)
                 self.view.warn("Nenhuma vaga encontrada.")
                 self.repository.save_jobs(request.jobs_output, [])
                 self.repository.save_jobs(request.details_output, [])
                 return 0
 
             self.view.show_jobs(result.jobs, request.show_jobs)
-            self._publish_event("detail_started", f"Iniciando detalhamento de {len(result.jobs)} vagas...", total=len(result.jobs))
+            self._publish_event(SearchEventName.DETAIL_STARTED, f"Iniciando detalhamento de {len(result.jobs)} vagas...", total=len(result.jobs))
             detailed_jobs = self._enrich_jobs(result.jobs, bridges, result.search_url, request)
             filtered_jobs = self._filter_jobs(detailed_jobs, request.filters_path)
 
-            self._publish_event("save_started", "Salvando vagas...")
+            self._publish_event(SearchEventName.SAVE_STARTED, "Salvando vagas...")
             self.repository.save_jobs(request.jobs_output, [job.summary for job in filtered_jobs])
             self.view.info(f"[bold green]Vagas salvas em:[/] {request.jobs_output}")
-            self._publish_event("save_details_started", "Salvando detalhes...")
+            self._publish_event(SearchEventName.SAVE_DETAILS_STARTED, "Salvando detalhes...")
             self.repository.save_jobs(request.details_output, filtered_jobs)
             self.view.info(f"[bold green]Vagas detalhadas salvas em:[/] {request.details_output}")
-            self._publish_event("save_finished", "Resultados salvos", jobs_output=request.jobs_output, details_output=request.details_output)
+            self._publish_event(SearchEventName.SAVE_FINISHED, "Resultados salvos", jobs_output=request.jobs_output, details_output=request.details_output)
             self.view.show_job_details(filtered_jobs, request.show_jobs)
             log.bind(
                 jobs_found=len(result.jobs),
@@ -94,7 +94,7 @@ class JobSearchService:
                 details_output=request.details_output,
             ).info("job_search_finished")
             self._publish_event(
-                "job_search_finished",
+                SearchEventName.JOB_SEARCH_FINISHED,
                 f"Busca finalizada com {len(filtered_jobs)} vagas",
                 jobs_found=len(result.jobs),
                 jobs_detailed=len(detailed_jobs),
@@ -103,7 +103,7 @@ class JobSearchService:
                 details_output=request.details_output,
             )
             self._publish_event(
-                "search_data",
+                SearchEventName.SEARCH_DATA,
                 f"Dados completos de {len(filtered_jobs)} vagas",
                 portal=self.adapter.name,
                 jobs_output=request.jobs_output,
@@ -117,7 +117,7 @@ class JobSearchService:
 
     def _prepare_bridges(self, query: SearchQuery, request: JobSearchRequest) -> list[BridgeEndpoint]:
         test_url = self.adapter.build_search_url(query)
-        self._publish_event("proxy_prepare_started", "Iniciando preparacao de proxies...")
+        self._publish_event(SearchEventName.PROXY_PREPARE_STARTED, "Iniciando preparacao de proxies...")
 
         def on_progress(name: str, message: str, payload: dict) -> None:
             self._publish_event(name, message, **payload)
@@ -138,7 +138,7 @@ class JobSearchService:
             portal=self.adapter.name,
             bridges_count=len(bridges),
         ).info("bridges_prepared")
-        self._publish_event("bridges_prepared", f"{len(bridges)} bridges ativas", bridges_count=len(bridges))
+        self._publish_event(SearchEventName.BRIDGES_PREPARED, f"{len(bridges)} bridges ativas", bridges_count=len(bridges))
         return bridges
 
     def _resolve_location(self, query: SearchQuery, bridges: list[BridgeEndpoint], request: JobSearchRequest) -> SearchQuery:
@@ -157,7 +157,7 @@ class JobSearchService:
                     error=str(exc),
                 ).warning("location_typeahead_failed")
                 self._publish_event(
-                    "location_typeahead_failed",
+                    SearchEventName.LOCATION_TYPEAHEAD_FAILED,
                     f"Typeahead falhou na bridge {bridge.index}",
                     level="warning",
                     bridge_index=bridge.index,
@@ -173,7 +173,7 @@ class JobSearchService:
                 location_name=selected.name,
             ).info("location_resolved")
             self._publish_event(
-                "location_resolved",
+                SearchEventName.LOCATION_RESOLVED,
                 f"Localizacao selecionada: {selected.name}",
                 location_id=selected.id,
                 location_name=selected.name,
@@ -188,7 +188,7 @@ class JobSearchService:
                 portal=self.adapter.name,
                 bridge_index=bridge.index,
             ).info("search_bridge_attempt")
-            self._publish_event("search_bridge_attempt", f"Testando bridge {bridge.index}", bridge_index=bridge.index)
+            self._publish_event(SearchEventName.SEARCH_BRIDGE_ATTEMPT, f"Testando bridge {bridge.index}", bridge_index=bridge.index)
             self.view.info(f"[bold]Testando {self.adapter.name} via bridge {bridge.index}:[/] {bridge.url}")
             try:
                 result = self.adapter.search_jobs(bridge.url, query, timeout, max_jobs=max_jobs, start=start)
@@ -200,7 +200,7 @@ class JobSearchService:
                     error=str(exc),
                 ).warning("search_bridge_failed")
                 self._publish_event(
-                    "search_bridge_failed",
+                    SearchEventName.SEARCH_BRIDGE_FAILED,
                     f"Bridge {bridge.index} falhou na busca",
                     level="warning",
                     bridge_index=bridge.index,
@@ -218,7 +218,7 @@ class JobSearchService:
                 url=result.response.url,
             ).info("search_bridge_succeeded")
             self._publish_event(
-                "search_bridge_succeeded",
+                SearchEventName.SEARCH_BRIDGE_SUCCEEDED,
                 f"Bridge {bridge.index} retornou {len(result.jobs)} vagas",
                 bridge_index=bridge.index,
                 status_code=result.response.status_code,
@@ -257,7 +257,7 @@ class JobSearchService:
                 self.view.info(f"[bold]Detalhes:[/] {done}/{total} - {results[i].summary.title or results[i].summary.external_id}")
                 if done % 5 == 0 or done == total:
                     ok_count = sum(1 for r in results[:done] if r is not None and r.details is not None)
-                    self._publish_event("detail_progress", f"{done}/{total}", done=done, total=total, ok=ok_count)
+                    self._publish_event(SearchEventName.DETAIL_PROGRESS, f"{done}/{total}", done=done, total=total, ok=ok_count)
 
         enriched = [r for r in results if r is not None]
         enriched.extend(session.unprocessed_postings())
@@ -295,7 +295,7 @@ class JobSearchService:
                     error=last_error,
                 ).warning("job_detail_bridge_failed")
                 self._publish_event(
-                    "job_detail_bridge_failed",
+                    SearchEventName.JOB_DETAIL_BRIDGE_FAILED,
                     f"Falha ao detalhar vaga {job.external_id}",
                     level="warning",
                     bridge_index=bridge.index,
@@ -311,7 +311,7 @@ class JobSearchService:
             error=last_error,
         ).error("job_detail_failed")
         self._publish_event(
-            "job_detail_failed",
+            SearchEventName.JOB_DETAIL_FAILED,
             f"Falha ao detalhar vaga {job.external_id}",
             level="error",
             job_id=job.external_id,
@@ -333,7 +333,7 @@ class JobSearchService:
             jobs_after=len(filtered_jobs),
         ).info("jobs_filtered")
         self._publish_event(
-            "jobs_filtered",
+            SearchEventName.JOBS_FILTERED,
             f"Filtro manteve {len(filtered_jobs)}/{len(jobs)} vagas",
             filters_path=filters_path,
             jobs_before=len(jobs),
@@ -343,6 +343,6 @@ class JobSearchService:
             self.view.warn("Nenhuma vaga passou no filtro informado.")
         return filtered_jobs
 
-    def _publish_event(self, name: str, message: str, level: str = "info", **payload) -> None:
+    def _publish_event(self, name: str | SearchEventName, message: str, level: str = "info", **payload) -> None:
         event_payload = {"portal": self.adapter.name, **payload}
         self.event_publisher.publish(SearchEvent(name=name, message=message, level=level, payload=event_payload))
