@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any
 
 from loguru import logger
 
 from job_search.application.dto.input.job_search_request import JobSearchRequest
+from job_search.application.dto.output.search_result import SearchResult
 from job_search.application.events.noop_search_event_publisher import NoopSearchEventPublisher
 from job_search.application.events.search_event import SearchEvent, SearchEventName
 from job_search.application.ports.job_board_adapter import JobBoardAdapter
@@ -60,60 +62,79 @@ class JobSearchService:
             query = self._resolve_location(query, bridges, request)
             result = self._search_with_first_working_bridge(query, bridges, request.timeout, request.max_jobs, request.start)
             if result is None:
-                log.warning("job_search_no_working_bridge")
-                self._publish_event(SearchEventName.JOB_SEARCH_NO_WORKING_BRIDGE, "Nenhuma bridge retornou resposta", level="warning")
-                self.view.error("Nenhuma bridge conseguiu retornar resposta do portal.")
-                return 1
+                return self._finish_without_working_bridge(log)
 
             if not result.jobs:
-                log.bind(search_url=result.search_url).warning("job_search_no_jobs")
-                self._publish_event(SearchEventName.JOB_SEARCH_NO_JOBS, "Nenhuma vaga encontrada", level="warning", search_url=result.search_url)
-                self.view.warn("Nenhuma vaga encontrada.")
-                self.repository.save_jobs(request.jobs_output, [])
-                self.repository.save_jobs(request.details_output, [])
-                return 0
+                return self._finish_without_jobs(request, result, log)
 
             self.view.show_jobs(result.jobs, request.show_jobs)
             self._publish_event(SearchEventName.DETAIL_STARTED, f"Iniciando detalhamento de {len(result.jobs)} vagas...", total=len(result.jobs))
             detailed_jobs = self._enrich_jobs(result.jobs, bridges, result.search_url, request)
             filtered_jobs = self._filter_jobs(detailed_jobs, request.filters_path)
 
-            self._publish_event(SearchEventName.SAVE_STARTED, "Salvando vagas...")
-            self.repository.save_jobs(request.jobs_output, [job.summary for job in filtered_jobs])
-            self.view.info(f"[bold green]Vagas salvas em:[/] {request.jobs_output}")
-            self._publish_event(SearchEventName.SAVE_DETAILS_STARTED, "Salvando detalhes...")
-            self.repository.save_jobs(request.details_output, filtered_jobs)
-            self.view.info(f"[bold green]Vagas detalhadas salvas em:[/] {request.details_output}")
-            self._publish_event(SearchEventName.SAVE_FINISHED, "Resultados salvos", jobs_output=request.jobs_output, details_output=request.details_output)
+            self._save_results(request, filtered_jobs)
             self.view.show_job_details(filtered_jobs, request.show_jobs)
-            log.bind(
-                jobs_found=len(result.jobs),
-                jobs_detailed=len(detailed_jobs),
-                jobs_filtered=len(filtered_jobs),
-                jobs_output=request.jobs_output,
-                details_output=request.details_output,
-            ).info("job_search_finished")
-            self._publish_event(
-                SearchEventName.JOB_SEARCH_FINISHED,
-                f"Busca finalizada com {len(filtered_jobs)} vagas",
-                jobs_found=len(result.jobs),
-                jobs_detailed=len(detailed_jobs),
-                jobs_filtered=len(filtered_jobs),
-                jobs_output=request.jobs_output,
-                details_output=request.details_output,
-            )
-            self._publish_event(
-                SearchEventName.SEARCH_DATA,
-                f"Dados completos de {len(filtered_jobs)} vagas",
-                portal=self.adapter.name,
-                jobs_output=request.jobs_output,
-                details_output=request.details_output,
-                jobs_count=len(filtered_jobs),
-                data=[job.to_dict() for job in filtered_jobs],
-            )
+            self._publish_finished_events(request, result, detailed_jobs, filtered_jobs, log)
             return 0
         finally:
             self.proxy_pool.stop()
+
+    def _finish_without_working_bridge(self, log: Any) -> int:
+        log.warning("job_search_no_working_bridge")
+        self._publish_event(SearchEventName.JOB_SEARCH_NO_WORKING_BRIDGE, "Nenhuma bridge retornou resposta", level="warning")
+        self.view.error("Nenhuma bridge conseguiu retornar resposta do portal.")
+        return 1
+
+    def _finish_without_jobs(self, request: JobSearchRequest, result: SearchResult, log: Any) -> int:
+        log.bind(search_url=result.search_url).warning("job_search_no_jobs")
+        self._publish_event(SearchEventName.JOB_SEARCH_NO_JOBS, "Nenhuma vaga encontrada", level="warning", search_url=result.search_url)
+        self.view.warn("Nenhuma vaga encontrada.")
+        self.repository.save_jobs(request.jobs_output, [])
+        self.repository.save_jobs(request.details_output, [])
+        return 0
+
+    def _save_results(self, request: JobSearchRequest, filtered_jobs: list[JobPosting]) -> None:
+        self._publish_event(SearchEventName.SAVE_STARTED, "Salvando vagas...")
+        self.repository.save_jobs(request.jobs_output, [job.summary for job in filtered_jobs])
+        self.view.info(f"[bold green]Vagas salvas em:[/] {request.jobs_output}")
+        self._publish_event(SearchEventName.SAVE_DETAILS_STARTED, "Salvando detalhes...")
+        self.repository.save_jobs(request.details_output, filtered_jobs)
+        self.view.info(f"[bold green]Vagas detalhadas salvas em:[/] {request.details_output}")
+        self._publish_event(SearchEventName.SAVE_FINISHED, "Resultados salvos", jobs_output=request.jobs_output, details_output=request.details_output)
+
+    def _publish_finished_events(
+        self,
+        request: JobSearchRequest,
+        result: SearchResult,
+        detailed_jobs: list[JobPosting],
+        filtered_jobs: list[JobPosting],
+        log: Any,
+    ) -> None:
+        log.bind(
+            jobs_found=len(result.jobs),
+            jobs_detailed=len(detailed_jobs),
+            jobs_filtered=len(filtered_jobs),
+            jobs_output=request.jobs_output,
+            details_output=request.details_output,
+        ).info("job_search_finished")
+        self._publish_event(
+            SearchEventName.JOB_SEARCH_FINISHED,
+            f"Busca finalizada com {len(filtered_jobs)} vagas",
+            jobs_found=len(result.jobs),
+            jobs_detailed=len(detailed_jobs),
+            jobs_filtered=len(filtered_jobs),
+            jobs_output=request.jobs_output,
+            details_output=request.details_output,
+        )
+        self._publish_event(
+            SearchEventName.SEARCH_DATA,
+            f"Dados completos de {len(filtered_jobs)} vagas",
+            portal=self.adapter.name,
+            jobs_output=request.jobs_output,
+            details_output=request.details_output,
+            jobs_count=len(filtered_jobs),
+            data=[job.to_dict() for job in filtered_jobs],
+        )
 
     def _prepare_bridges(self, query: SearchQuery, request: JobSearchRequest) -> list[BridgeEndpoint]:
         test_url = self.adapter.build_search_url(query)
