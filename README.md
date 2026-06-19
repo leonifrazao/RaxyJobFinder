@@ -27,7 +27,7 @@ docker build -t raxy .
 A imagem já empacota Python, dependências e o Xray-core. Use:
 
 ```bash
-docker run --rm -v "$PWD/output:/app/output" raxy --keywords "Python" --portal linkedin
+docker run --rm -it -v "$PWD/output:/app/output" raxy --keywords "Python" --portal linkedin
 ```
 
 ### Nix (NixOS / nix-shell)
@@ -169,7 +169,7 @@ Use `job.to_dict()` para serializar em dicionário (útil para JSON).
 | `max_count` | `177` | Máximo de configs de proxy a carregar |
 | `threads` | `8` | Workers para testar proxies |
 | `timeout` | `12.0` | Timeout do proxy (segundos) |
-| `detail_timeout` | `5.0` | Timeout do detalhe (segundos) |
+| `detail_timeout` | `15.0` | Timeout do detalhe (segundos) |
 | `filters` | `None` | `JobFilterSet`, caminho de arquivo, ou `None` |
 | `filters_path` | `None` | Caminho do arquivo de filtro (alternativo) |
 | `details_limit` | `0` | Máx. de vagas para detalhar (`0` = todas) |
