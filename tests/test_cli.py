@@ -23,6 +23,7 @@ class TestBuildParser:
         parser = build_parser()
         args = parser.parse_args([])
         assert args.provider == DEFAULT_PROVIDER
+        assert args.provider == "united-states"
 
     def test_default_valid_count(self):
         parser = build_parser()
@@ -194,6 +195,9 @@ class TestBuildParser:
 
 
 class TestProxyProviders:
+    def test_default_provider_is_united_states(self):
+        assert DEFAULT_PROVIDER == "united-states"
+
     def test_united_states_url(self):
         assert PROXY_PROVIDERS["united-states"] == f"{SPLITTED_BY_COUNTRY_BASE}/United_States.txt"
 

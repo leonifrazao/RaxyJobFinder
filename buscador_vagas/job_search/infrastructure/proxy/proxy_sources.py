@@ -19,7 +19,7 @@ PROXY_PROVIDERS = {
     "netherlands": f"{SPLITTED_BY_COUNTRY_BASE}/Netherlands.txt",
     "all": [f"{SPLITTED_BY_COUNTRY_BASE}/{country}.txt" for country in ALL_COUNTRY_FILES],
 }
-DEFAULT_PROVIDER = "all"
+DEFAULT_PROVIDER = "united-states"
 
 
 def resolve_proxy_sources(provider_name: str, custom_sources: list[str] | None = None) -> list[str]:
