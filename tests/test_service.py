@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -156,6 +157,70 @@ class TestJobSearchService:
         assert "bridges_prepared" in event_names
         assert "search_bridge_succeeded" in event_names
         assert "job_search_no_jobs" in event_names
+
+    def test_run_adds_modalidade_to_saved_results_and_search_data(
+        self,
+        mock_adapter,
+        mock_proxy_pool,
+        mock_repository,
+        mock_filter_repository,
+        mock_view,
+        sample_request,
+    ):
+        publisher = FakeEventPublisher()
+        service = build_service(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, publisher)
+        request = replace(sample_request, location_id="103644278", work_type="remote", details_limit=1)
+        job = JobSummary("linkedin", "e1", "Data Analyst")
+        mock_adapter.search_jobs.return_value = SearchResult(
+            query=SearchQuery("Python", "Brasil", "103644278", "remote"),
+            search_url="http://url",
+            response=HttpResponse(200, "http://url", {}, "<html/>"),
+            jobs=[job],
+        )
+        mock_adapter.fetch_job_details.return_value = (
+            JobDetails(title="Data Analyst"),
+            HttpResponse(200, "http://detail", {}, "<html/>"),
+        )
+
+        result = service.run(request)
+
+        assert result == 0
+        saved_summaries = mock_repository.save_jobs.call_args_list[0].args[1]
+        saved_details = mock_repository.save_jobs.call_args_list[1].args[1]
+        assert saved_summaries[0].to_dict()["modalidade"] == "remoto"
+        assert saved_details[0].to_dict()["modalidade"] == "remoto"
+        search_data_events = [event for event in publisher.events if event.name == "search_data"]
+        assert search_data_events[-1].payload["data"][0]["modalidade"] == "remoto"
+
+    def test_with_modalidade_preserves_provider_value(self, service):
+        posting = JobPosting(
+            summary=JobSummary(
+                "linkedin",
+                "e1",
+                "Dev",
+                provider_data={"modalidade": "presencial"},
+            )
+        )
+
+        result = service._with_modalidade([posting], "hybrid")
+
+        assert result[0] is posting
+        assert result[0].to_dict()["modalidade"] == "presencial"
+
+    @pytest.mark.parametrize(
+        ("work_type", "expected"),
+        [
+            (None, "normal"),
+            ("normal", "normal"),
+            ("remote", "remoto"),
+            ("remoto", "remoto"),
+            ("hybrid", "híbrido"),
+            ("hibrido", "híbrido"),
+            ("híbrido", "híbrido"),
+        ],
+    )
+    def test_normalize_modalidade(self, service, work_type, expected):
+        assert service._normalize_modalidade(work_type) == expected
 
     def test_prepare_bridges(self, service, mock_proxy_pool, sample_request):
         query = SearchQuery("Python", "Brasil")

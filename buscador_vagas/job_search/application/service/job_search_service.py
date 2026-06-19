@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from loguru import logger
@@ -76,6 +77,7 @@ class JobSearchService(JobSearchUseCase):
             self.view.show_jobs(result.jobs, request.show_jobs)
             self._publish_event(SearchEventName.DETAIL_STARTED, f"Iniciando detalhamento de {len(result.jobs)} vagas...", total=len(result.jobs))
             detailed_jobs = self._enrich_jobs(result.jobs, bridges, result.search_url, request)
+            detailed_jobs = self._with_modalidade(detailed_jobs, request.work_type)
             filtered_jobs = self._filter_jobs(detailed_jobs, request.filters_path)
 
             self._save_results(request, filtered_jobs)
@@ -169,6 +171,31 @@ class JobSearchService(JobSearchUseCase):
 
     def _enrich_jobs(self, jobs: list[JobSummary], bridges: list[BridgeEndpoint], search_url: str, request: JobSearchRequest) -> list[JobPosting]:
         return self.job_detailing.enrich_jobs(jobs, bridges, search_url, request)
+
+    def _with_modalidade(self, jobs: list[JobPosting], work_type: str | None) -> list[JobPosting]:
+        modalidade = self._normalize_modalidade(work_type)
+        enriched_jobs: list[JobPosting] = []
+        for job in jobs:
+            if "modalidade" in job.summary.provider_data:
+                enriched_jobs.append(job)
+                continue
+            provider_data = {**job.summary.provider_data, "modalidade": modalidade}
+            summary = replace(job.summary, provider_data=provider_data)
+            enriched_jobs.append(replace(job, summary=summary))
+        return enriched_jobs
+
+    @staticmethod
+    def _normalize_modalidade(work_type: str | None) -> str:
+        if not work_type:
+            return "normal"
+        value = work_type.strip().casefold()
+        if value in {"remote", "remoto"}:
+            return "remoto"
+        if value in {"hybrid", "hibrido", "híbrido"}:
+            return "híbrido"
+        if value == "normal":
+            return "normal"
+        return value
 
     def _detail_one_job(
         self,
