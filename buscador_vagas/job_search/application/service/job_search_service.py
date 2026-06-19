@@ -199,7 +199,12 @@ class JobSearchService(JobSearchUseCase):
         text_parts = [job.summary.location]
         if job.details:
             text_parts.append(job.details.location)
-        return self._classify_modalidade_text(" ".join(text_parts))
+        modalidade = self._classify_modalidade_text(" ".join(text_parts))
+        if modalidade:
+            return modalidade
+        if job.summary.provider == "gupy" and not job.summary.location.strip():
+            return "remoto"
+        return None
 
     def _infer_modalidade_from_criteria(self, criteria: dict[str, str]) -> str | None:
         for key, value in criteria.items():

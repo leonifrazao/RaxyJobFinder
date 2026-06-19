@@ -180,8 +180,8 @@ class GupyJobBoardAdapter:
         return jobs
 
     def _parse_job_detail(self, data: dict) -> JobDetails:
-        city = data.get("city", "")
-        state = data.get("state", "")
+        city = data.get("city", "") or "REMOTO"
+        state = data.get("state", "") or ""
         description = data.get("description", "")
         description = description.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&#39;", "'")
 
@@ -232,7 +232,9 @@ class GupyJobBoardAdapter:
     def _format_location(city: str, state: str) -> str:
         if city and state:
             return f"{city}, {state}"
-        return city or state or ""
+        if city or state:
+            return city or state
+        return "REMOTO"
 
     @staticmethod
     def _type_label(t: str) -> str:

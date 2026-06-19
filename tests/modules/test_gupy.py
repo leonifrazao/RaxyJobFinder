@@ -136,7 +136,7 @@ class TestFormatLocation:
         assert GupyJobBoardAdapter._format_location("", "SP") == "SP"
 
     def test_both_empty(self):
-        assert GupyJobBoardAdapter._format_location("", "") == ""
+        assert GupyJobBoardAdapter._format_location("", "") == "REMOTO"
 
 
 class TestTypeLabel:
