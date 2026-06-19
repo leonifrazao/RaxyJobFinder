@@ -6,6 +6,7 @@ import threading
 import pytermgui as ptg
 from loguru import logger
 
+from job_search.infrastructure.logging import resolve_error_log_path
 from job_search.infrastructure.proxy.proxy_sources import DEFAULT_PROVIDER
 from job_search.infrastructure.messaging.redis_search_event_subscriber import RedisSearchEventSubscriber
 from job_search.interfaces.tui.tui_event_formatter import TuiEventFormatter
@@ -161,6 +162,7 @@ class TuiApp:
             except Exception as exc:
                 logger.bind(component="tui", error=str(exc)).exception("tui_backend_failed")
                 self._append_event(f"[ERROR] Backend falhou: {exc}")
+                self._append_event(f"[ERROR] Log salvo em {resolve_error_log_path()}")
 
         threading.Thread(target=run, daemon=True).start()
 

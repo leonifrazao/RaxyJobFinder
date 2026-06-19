@@ -4,13 +4,14 @@ import json
 
 from loguru import logger
 
-from job_search.infrastructure.logging import configure_logging
+from job_search.infrastructure.logging import configure_logging, resolve_error_log_path
 
 
 class TestConfigureLogging:
     def test_writes_structured_json_log(self, tmp_path):
         log_path = tmp_path / "raxy.jsonl"
-        configure_logging(log_path=str(log_path), force=True, enqueue=False)
+        error_log_path = tmp_path / "raxy-error.log"
+        configure_logging(log_path=str(log_path), error_log_path=str(error_log_path), force=True, enqueue=False)
 
         logger.bind(component="test", portal="linkedin", jobs_count=3).info("search_finished")
 
@@ -21,13 +22,30 @@ class TestConfigureLogging:
         assert record["extra"]["portal"] == "linkedin"
         assert record["extra"]["jobs_count"] == 3
 
+    def test_writes_error_log_file(self, tmp_path):
+        log_path = tmp_path / "raxy.jsonl"
+        error_log_path = tmp_path / "raxy-error.log"
+        configure_logging(log_path=str(log_path), error_log_path=str(error_log_path), force=True, enqueue=False)
+
+        logger.bind(component="test", error="boom").error("backend_failed")
+
+        text = error_log_path.read_text(encoding="utf-8")
+        assert "ERROR" in text
+        assert "backend_failed" in text
+        assert "component" in text
+
     def test_is_idempotent_without_force(self, tmp_path):
         first_path = tmp_path / "first.jsonl"
         second_path = tmp_path / "second.jsonl"
-        configure_logging(log_path=str(first_path), force=True, enqueue=False)
+        configure_logging(log_path=str(first_path), error_log_path=str(tmp_path / "first-error.log"), force=True, enqueue=False)
         configure_logging(log_path=str(second_path), enqueue=False)
 
         logger.info("keeps_first_sink")
 
         assert first_path.exists()
         assert not second_path.exists()
+
+    def test_resolves_error_log_path_from_env(self, monkeypatch):
+        monkeypatch.setenv("RAXY_ERROR_LOG_PATH", "custom/error.log")
+
+        assert resolve_error_log_path() == "custom/error.log"
