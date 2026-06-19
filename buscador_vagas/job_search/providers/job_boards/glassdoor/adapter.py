@@ -7,7 +7,7 @@ from urllib.parse import urlencode, quote
 from job_search.application.dto.output.http_response import HttpResponse
 from job_search.application.dto.output.search_result import SearchResult
 from job_search.application.ports.http_client import HttpClient
-from job_search.domain.job_details import JobDetails
+from job_search.domain.job_details import JobDetails, extract_requisitos
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
 from job_search.domain.search_query import SearchQuery
@@ -285,9 +285,18 @@ class GlassdoorJobBoardAdapter:
             applicants_text="",
             description="",
             criteria={
+                "Tipo": "N/A",
                 "Cidade": city,
                 "Estado": state,
-                "Easy Apply": "Sim" if job.provider_data.get("easyApply") else "Não",
+                "Trabalho": "N/A",
+                "Remoto": "N/A",
+                "PCD": "N/A",
+                "Prazo": "N/A",
+                "Nivel de experiencia": "N/A",
+                "Funcao": "N/A",
+                "Setores": "N/A",
+                "Salario": "N/A",
+                "Easy Apply": "Sim" if job.provider_data.get("easyApply") else "Nao",
             },
             url=job.url,
             logo_url=job.logo_url,
@@ -327,7 +336,8 @@ class GlassdoorJobBoardAdapter:
             criteria["Salario"] = f"{header.get('payCurrency', '')} ({header.get('salarySource', '')})"
         criteria["Cidade"] = city
         criteria["Estado"] = state
-        criteria["Easy Apply"] = "Sim" if header.get("easyApply") else "Não"
+        criteria["Easy Apply"] = "Sim" if header.get("easyApply") else "Nao"
+        criteria["requisitos"] = extract_requisitos(desc)
 
         return JobDetails(
             title=header.get("jobTitleText", details.title),

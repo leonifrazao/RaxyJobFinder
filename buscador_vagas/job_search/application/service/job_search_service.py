@@ -237,14 +237,14 @@ class JobSearchService(JobSearchUseCase):
     @staticmethod
     def _normalize_modalidade(work_type: str | None) -> str:
         if not work_type:
-            return "normal"
+            return "presencial"
         value = work_type.strip().casefold()
         if value in {"remote", "remoto"}:
             return "remoto"
         if value in {"hybrid", "hibrido", "híbrido"}:
             return "híbrido"
-        if value == "normal":
-            return "normal"
+        if value in {"normal", "presencial"}:
+            return "presencial"
         return value
 
     def _detail_one_job(

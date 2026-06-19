@@ -209,7 +209,15 @@ class TestParseJobDetailHtml:
         assert details.posted_text == "Ha 2 semanas"
         assert details.applicants_text == "50+ candidatos"
         assert details.description == "Vaga para engenheiro senior"
-        assert details.criteria == {"Nivel": "Senior", "Tipo": "CLT"}
+        assert details.criteria["Nivel"] == "Senior"
+        assert details.criteria["Tipo"] == "CLT"
+        assert details.criteria["Cidade"] == "São Paulo"
+        assert details.criteria["Estado"] == "N/A"
+        assert details.criteria["Trabalho"] == "Presencial"
+        assert details.criteria["Remoto"] == "Nao"
+        assert details.criteria["PCD"] == "N/A"
+        assert details.criteria["Prazo"] == "N/A"
+        assert details.criteria["Salario"] == "N/A"
         assert details.apply_text == "Candidate-se"
         assert details.url == "/jobs/view/12345"
         assert details.logo_url == "https://logo.com/acme.png"
@@ -219,12 +227,19 @@ class TestParseJobDetailHtml:
     def test_empty_html(self, adapter: LinkedInJobBoardAdapter):
         details = adapter._parse_job_detail_html("<html></html>")
         assert details.title == ""
-        assert details.criteria == {}
+        assert details.criteria["Cidade"] == "N/A"
+        assert details.criteria["Estado"] == "N/A"
+        assert details.criteria["Trabalho"] == "Presencial"
+        assert details.criteria["Remoto"] == "Nao"
 
     def test_minimal_detail(self, adapter: LinkedInJobBoardAdapter):
         html = "<div><div class='top-card-layout__title'>Dev</div></div>"
         details = adapter._parse_job_detail_html(html)
         assert details.title == "Dev"
+        assert details.criteria["Cidade"] == "N/A"
+        assert details.criteria["Estado"] == "N/A"
+        assert details.criteria["Trabalho"] == "Presencial"
+        assert details.criteria["Remoto"] == "Nao"
 
 
 class TestParseJobsFromApi:

@@ -154,7 +154,7 @@ class TestTypeLabel:
 class TestWorkplaceLabel:
     def test_known_labels(self):
         assert GupyJobBoardAdapter._workplace_label("remote") == "Remoto"
-        assert GupyJobBoardAdapter._workplace_label("hybrid") == "Híbrido"
+        assert GupyJobBoardAdapter._workplace_label("hybrid") == "Hibrido"
         assert GupyJobBoardAdapter._workplace_label("on-site") == "Presencial"
 
     def test_unknown_passthrough(self):

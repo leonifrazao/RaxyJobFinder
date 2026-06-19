@@ -241,8 +241,9 @@ class TestJobSearchService:
     @pytest.mark.parametrize(
         ("work_type", "expected"),
         [
-            (None, "normal"),
-            ("normal", "normal"),
+            (None, "presencial"),
+            ("normal", "presencial"),
+            ("presencial", "presencial"),
             ("remote", "remoto"),
             ("remoto", "remoto"),
             ("hybrid", "híbrido"),

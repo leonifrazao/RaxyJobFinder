@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from urllib.parse import urlencode
 
 from bs4 import BeautifulSoup
@@ -8,10 +10,30 @@ from bs4 import BeautifulSoup
 from job_search.application.dto.output.http_response import HttpResponse
 from job_search.application.dto.output.search_result import SearchResult
 from job_search.application.ports.http_client import HttpClient
-from job_search.domain.job_details import JobDetails
+from job_search.domain.job_details import JobDetails, extract_requisitos
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
 from job_search.domain.search_query import SearchQuery
+
+_REMOTE_PATTERN = re.compile(
+    r"(?:home\s*office|trabalhe?\s*(?:de\s*)?casa|work\s*(?:from\s*)?home|"
+    r"teletrabalho|remoto|100[%\s]*remoto|fully\s*remote|remoto\s*(?:integral|total)|"
+    r"100%\s*remoto)",
+    re.IGNORECASE,
+)
+
+_HYBRID_PATTERN = re.compile(
+    r"(?:h[ií]brid[o0]|hibrido|hybrid|modelo\s*h[ií]brido|esquema\s*h[ií]brido|"
+    r"presencial\s*\d+\s*(?:x|vez(?:es)?)\s*(?:por\s*)?(?:semana|m[eê]s|dia)|"
+    r"\d+\s*(?:x|vez(?:es)?)\s*(?:por\s*)?(?:semana|m[eê]s|dia)\s*presencial)",
+    re.IGNORECASE,
+)
+
+_PRESENCIAL_PATTERN = re.compile(
+    r"(?:presencial|escrit[óo]rio|on[\s-]*site|formato\s*presencial|"
+    r"regime\s*presencial|trabalho\s*(?:no\s*)?(?:escrit[óo]rio|local|presencial))",
+    re.IGNORECASE,
+)
 
 
 LINKEDIN_SEARCH_BASE_URL = "https://www.linkedin.com/jobs/search"
@@ -264,6 +286,10 @@ class LinkedInJobBoardAdapter:
         top_link = soup.select_one("a.topcard__link")
         logo_element = soup.select_one(".top-card-layout__card img.artdeco-entity-image")
 
+        title = self._clean_text(title_element.get_text(" ") if title_element else "")
+        description = self._clean_text(description_element.get_text("\n") if description_element else "")
+        location = self._clean_text(location_element.get_text(" ") if location_element else "")
+
         criteria: dict[str, str] = {}
         for item in soup.select(".description__job-criteria-item"):
             label_element = item.select_one(".description__job-criteria-subheader")
@@ -271,19 +297,39 @@ class LinkedInJobBoardAdapter:
             label = self._clean_text(label_element.get_text(" ") if label_element else "")
             value = self._clean_text(value_element.get_text(" ") if value_element else "")
             if label:
+                label = unicodedata.normalize("NFKD", label).encode("ascii", "ignore").decode("ascii")
                 criteria[label] = value
+
+        if "Tipo de emprego" in criteria:
+            criteria["Tipo"] = criteria.pop("Tipo de emprego")
+
+        if location and "," in location:
+            criteria["Cidade"] = location.split(",", 1)[0].strip()
+        else:
+            criteria["Cidade"] = "N/A"
+        criteria["Estado"] = "N/A"
+
+        trabalho, remoto = self._detect_work_type(title, description)
+        criteria["Trabalho"] = trabalho
+        criteria["Remoto"] = remoto
+
+        for field in ("PCD", "Prazo", "Salario"):
+            if field not in criteria:
+                criteria[field] = "N/A"
+
+        criteria["requisitos"] = extract_requisitos(description)
 
         decorated_id_code = soup.select_one("#decoratedJobPostingId")
         reference_id_code = soup.select_one("#referenceId")
 
         return JobDetails(
-            title=self._clean_text(title_element.get_text(" ") if title_element else ""),
+            title=title,
             company=self._clean_text(company_element.get_text(" ") if company_element else ""),
             company_url=company_element.get("href", "") if company_element else "",
-            location=self._clean_text(location_element.get_text(" ") if location_element else ""),
+            location=location,
             posted_text=self._clean_text(posted_element.get_text(" ") if posted_element else ""),
             applicants_text=self._clean_text(applicants_element.get_text(" ") if applicants_element else ""),
-            description=self._clean_text(description_element.get_text("\n") if description_element else ""),
+            description=description,
             criteria=criteria,
             apply_text=self._clean_text(apply_button.get_text(" ") if apply_button else ""),
             url=top_link.get("href", "") if top_link else "",
@@ -293,6 +339,15 @@ class LinkedInJobBoardAdapter:
                 "detail_reference_id": self._clean_text(reference_id_code.get_text(" ") if reference_id_code else "").strip('"'),
             },
         )
+
+    @staticmethod
+    def _detect_work_type(title: str, description: str) -> tuple[str, str]:
+        text = f"{title} {description}"
+        if _REMOTE_PATTERN.search(text):
+            return "Remoto", "Sim"
+        if _HYBRID_PATTERN.search(text):
+            return "Hibrido", "Nao"
+        return "Presencial", "Nao"
 
     @staticmethod
     def _clean_text(value: str | None) -> str:

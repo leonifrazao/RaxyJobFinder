@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from job_search.application.dto.output.http_response import HttpResponse
 from job_search.application.dto.output.search_result import SearchResult
 from job_search.application.ports.http_client import HttpClient
-from job_search.domain.job_details import JobDetails
+from job_search.domain.job_details import JobDetails, extract_requisitos
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
 from job_search.domain.search_query import SearchQuery
@@ -198,9 +198,14 @@ class GupyJobBoardAdapter:
                 "Cidade": city,
                 "Estado": state,
                 "Trabalho": self._workplace_label(data.get("workplaceType", "")),
-                "Remoto": "Sim" if data.get("isRemoteWork") else "Não",
-                "PCD": "Sim" if data.get("disabilities") else "Não",
+                "Remoto": "Sim" if data.get("isRemoteWork") else "Nao",
+                "PCD": "Sim" if data.get("disabilities") else "Nao",
                 "Prazo": data.get("applicationDeadline", ""),
+                "Nivel de experiencia": "N/A",
+                "Funcao": "N/A",
+                "Setores": "N/A",
+                "Salario": "N/A",
+                "requisitos": extract_requisitos(description),
             },
             apply_text="",
             url=data.get("jobUrl", ""),
@@ -251,7 +256,7 @@ class GupyJobBoardAdapter:
     def _workplace_label(w: str) -> str:
         labels = {
             "remote": "Remoto",
-            "hybrid": "Híbrido",
+            "hybrid": "Hibrido",
             "on-site": "Presencial",
         }
         return labels.get(w, w)
