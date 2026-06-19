@@ -16,6 +16,7 @@ dependencies = [
     "rich>=13.0.0",
     "pytermgui>=7.7.0",
     "PyYAML>=6.0.0",
+    "loguru>=0.7.0",
 ]
 
 [tool.setuptools.packages.find]

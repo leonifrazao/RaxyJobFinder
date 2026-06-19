@@ -30,12 +30,13 @@ pkgs.mkShell {
     export PATH="$VIRTUAL_ENV/bin:$PATH"
     VENV_PYTHON="$VIRTUAL_ENV/bin/python"
 
-    "$VENV_PYTHON" - <<'PY' >/dev/null 2>&1 || "$VENV_PYTHON" -m pip install --upgrade botasaurus dependency-injector beautifulsoup4 pytermgui PyYAML
+    "$VENV_PYTHON" - <<'PY' >/dev/null 2>&1 || "$VENV_PYTHON" -m pip install --upgrade botasaurus dependency-injector beautifulsoup4 pytermgui PyYAML loguru
 import botasaurus
 import dependency_injector
 import bs4
 import pytermgui
 import yaml
+import loguru
 PY
 
     if command -v xray >/dev/null 2>&1; then
@@ -59,6 +60,11 @@ PY
     echo "PyTermGUI: $("$VENV_PYTHON" - <<'PY'
 import pytermgui
 print(getattr(pytermgui, '__version__', 'installed'))
+PY
+)"
+    echo "Loguru: $("$VENV_PYTHON" - <<'PY'
+import loguru
+print(getattr(loguru, '__version__', 'installed'))
 PY
 )"
     if [ -n "$XRAY_PATH" ]; then

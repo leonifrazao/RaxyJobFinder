@@ -3,6 +3,7 @@ from __future__ import annotations
 from buscador_vagas.job_search.application.dto.input.job_search_request import JobSearchRequest
 from buscador_vagas.job_search.domain.filtering import JobFilterSet
 from buscador_vagas.job_search.domain.job_posting import JobPosting
+from buscador_vagas.job_search.infrastructure.logging import configure_logging
 from buscador_vagas.job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
 from buscador_vagas.job_search.infrastructure.proxy.proxy_sources import DEFAULT_PROVIDER, resolve_proxy_sources
 from buscador_vagas.sdk.custom_filter_repository import _CustomFilterRepository
@@ -39,8 +40,10 @@ class JobFinder:
         silent: bool = True,
     ):
         from dependency_injector import providers
+        from loguru import logger
 
         from buscador_vagas.job_search.container import JobSearchContainer
+        configure_logging()
         if portal not in self.PORTALS:
             raise ValueError(
                 f"Portal invalido: {portal}. Opcoes: {', '.join(self.PORTALS)}"
@@ -84,6 +87,12 @@ class JobFinder:
         self._container.config.portal_name.from_value(portal)
         self._container.config.provider_name.from_value(proxy_provider)
         self._container.config.gd_cookie.from_value(gd_cookie)
+        logger.bind(
+            component="sdk",
+            portal=portal,
+            provider=proxy_provider,
+            proxy_sources_count=len(proxy_sources),
+        ).info("sdk_job_finder_created")
 
         self._view = SilentView()
         self._repository = InMemoryRepository()
@@ -108,6 +117,8 @@ class JobFinder:
         details_output: str | None = None,
         filters: JobFilterSet | str | None = None,
     ) -> list[JobPosting]:
+        from loguru import logger
+
         if isinstance(filters, JobFilterSet):
             self._filter_repo.filter_set = filters
             effective_filters_path: str | None = None
@@ -145,7 +156,17 @@ class JobFinder:
             detail_threads=self._detail_threads,
         )
 
-        self._service.run(request)
-        return self._repository.postings or [
+        logger.bind(component="sdk", portal=self._portal, keywords=self._keywords).info("sdk_search_started")
+        exit_code = self._service.run(request)
+        jobs = self._repository.postings or [
             JobPosting(summary=summary) for summary in self._repository.summaries
         ]
+        logger.bind(
+            component="sdk",
+            portal=self._portal,
+            exit_code=exit_code,
+            jobs_count=len(jobs),
+            jobs_output=jobs_output,
+            details_output=details_output,
+        ).info("sdk_search_finished")
+        return jobs

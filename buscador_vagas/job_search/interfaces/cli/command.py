@@ -3,8 +3,11 @@ from __future__ import annotations
 import argparse
 import sys
 
+from loguru import logger
+
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.container import JobSearchContainer
+from job_search.infrastructure.logging import configure_logging
 from job_search.infrastructure.proxy.proxy_sources import (
     ALL_COUNTRY_FILES,
     DEFAULT_PROVIDER,
@@ -48,9 +51,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_logging()
     args = build_parser().parse_args(argv)
     portal = args.portal
     proxy_sources = resolve_proxy_sources(args.provider, args.proxy_source)
+    logger.bind(
+        component="cli",
+        portal=portal,
+        provider=args.provider,
+        proxy_sources_count=len(proxy_sources),
+    ).info("cli_search_requested")
     container = JobSearchContainer()
     container.config.portal_name.from_value(portal)
     container.config.provider_name.from_value(args.provider)
@@ -85,7 +95,10 @@ def main(argv: list[str] | None = None) -> int:
             view.info(f"[bold]Fonte {i}:[/] {src}")
         view.info(f"[bold]Keywords:[/] {args.keywords}")
         view.info(f"[bold]Localizacao inicial:[/] {args.location}")
-        return service.run(request)
+        exit_code = service.run(request)
+        logger.bind(component="cli", portal=portal, exit_code=exit_code).info("cli_search_finished")
+        return exit_code
     except Exception as exc:
+        logger.bind(component="cli", portal=portal).exception("cli_search_failed")
         print(str(exc), file=sys.stderr)
         return 1
