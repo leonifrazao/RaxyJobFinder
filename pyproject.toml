@@ -15,6 +15,7 @@ dependencies = [
     "urllib3>=2.0.0",
     "rich>=13.0.0",
     "pytermgui>=7.7.0",
+    "PyYAML>=6.0.0",
 ]
 
 [tool.setuptools.packages.find]
