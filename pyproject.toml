@@ -18,7 +18,7 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["buscador_vagas", "proxy_framework/src", "."]
-include = ["job_search*", "src", "buscador_vagas"]
+include = ["job_search*", "src*", "buscador_vagas*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

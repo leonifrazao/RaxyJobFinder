@@ -26,9 +26,11 @@ pkgs.mkShell {
       python -m venv "$PWD/.venv" --system-site-packages
     fi
 
-    . "$PWD/.venv/bin/activate"
+    export VIRTUAL_ENV="$PWD/.venv"
+    export PATH="$VIRTUAL_ENV/bin:$PATH"
+    VENV_PYTHON="$VIRTUAL_ENV/bin/python"
 
-    python - <<'PY' >/dev/null 2>&1 || python -m pip install --upgrade botasaurus dependency-injector beautifulsoup4
+    "$VENV_PYTHON" - <<'PY' >/dev/null 2>&1 || "$VENV_PYTHON" -m pip install --upgrade botasaurus dependency-injector beautifulsoup4
 import botasaurus
 import dependency_injector
 import bs4
@@ -41,13 +43,13 @@ PY
     fi
 
     echo "Scrapper LinkedIn nix-shell"
-    echo "Python: $(python --version)"
-    echo "Botasaurus: $(python - <<'PY'
+    echo "Python: $("$VENV_PYTHON" --version)"
+    echo "Botasaurus: $("$VENV_PYTHON" - <<'PY'
 import botasaurus
 print(getattr(botasaurus, '__version__', 'installed'))
 PY
 )"
-    echo "Dependency Injector: $(python - <<'PY'
+    echo "Dependency Injector: $("$VENV_PYTHON" - <<'PY'
 import dependency_injector
 print(getattr(dependency_injector, '__version__', 'installed'))
 PY
