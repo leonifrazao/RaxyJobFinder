@@ -403,6 +403,56 @@ class TestTuiApp:
         assert result == 0
         app._run_window.assert_called_once()
 
+    def test_start_event_listener_uses_factory_and_stores_lifecycle(self, monkeypatch):
+        created = {}
+        started = []
+
+        class FakeSubscriber:
+            def listen(self, stop_event, handler):
+                created["stop_event"] = stop_event
+                created["handler"] = handler
+
+        class FakeThread:
+            def __init__(self, target, args, daemon=False) -> None:
+                self._target = target
+                self._args = args
+                self.daemon = daemon
+
+            def start(self) -> None:
+                started.append(self)
+
+            def join(self, timeout=None) -> None:
+                pass
+
+        def factory(redis_url: str, channel: str):
+            created["redis_url"] = redis_url
+            created["channel"] = channel
+            return FakeSubscriber()
+
+        monkeypatch.setattr("job_search.interfaces.tui.tui_app.threading.Thread", FakeThread)
+        app = TuiApp(subscriber_factory=factory)
+        state = TuiState(redis_url="redis://test", events_channel="events")
+        app._start_event_listener(state)
+
+        assert created["redis_url"] == "redis://test"
+        assert created["channel"] == "events"
+        assert app._event_stop_event is not None
+        assert app._event_thread is started[0]
+
+    def test_stop_event_listener_sets_event_and_joins_thread(self):
+        app = TuiApp()
+        stop_event = MagicMock()
+        thread = MagicMock()
+        app._event_stop_event = stop_event
+        app._event_thread = thread
+
+        app._stop_event_listener()
+
+        stop_event.set.assert_called_once()
+        thread.join.assert_called_once_with(timeout=1.0)
+        assert app._event_stop_event is None
+        assert app._event_thread is None
+
     def test_start_search_runs_and_resets_flag(self, monkeypatch):
         threads_started = []
 

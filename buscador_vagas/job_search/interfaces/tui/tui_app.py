@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import threading
+from collections.abc import Callable
 
 import pytermgui as ptg
 from loguru import logger
@@ -17,13 +18,23 @@ from job_search.interfaces.tui.tui_state import TuiState
 PENDING = "[dim]aguardando...[/]"
 PROCESSING = "[yellow]processando...[/]"
 
+SubscriberFactory = Callable[[str, str], RedisSearchEventSubscriber]
+
 
 class TuiApp:
-    def __init__(self) -> None:
-        self._reader = TuiInputReader()
-        self._runner = TuiSearchRunner()
+    def __init__(
+        self,
+        reader: TuiInputReader | None = None,
+        runner: TuiSearchRunner | None = None,
+        subscriber_factory: SubscriberFactory | None = None,
+    ) -> None:
+        self._reader = reader or TuiInputReader()
+        self._runner = runner or TuiSearchRunner()
+        self._subscriber_factory = subscriber_factory or self._build_subscriber
         self._search_started = False
         self._manager: ptg.WindowManager | None = None
+        self._event_stop_event: threading.Event | None = None
+        self._event_thread: threading.Thread | None = None
         self._fields: dict[str, ptg.InputField] = {}
         self._proxy_label: ptg.Label | None = None
         self._search_label: ptg.Label | None = None
@@ -33,8 +44,15 @@ class TuiApp:
 
     def run(self) -> int:
         self._search_started = False
-        self._run_window()
-        return 0
+        try:
+            self._run_window()
+            return 0
+        finally:
+            self._stop_event_listener()
+
+    @staticmethod
+    def _build_subscriber(redis_url: str, channel: str) -> RedisSearchEventSubscriber:
+        return RedisSearchEventSubscriber(redis_url=redis_url, channel=channel)
 
     def _run_window(self) -> None:
         with ptg.YamlLoader() as loader:
@@ -157,26 +175,38 @@ class TuiApp:
         self._start_search(state)
 
     def _start_event_listener(self, state: TuiState) -> None:
+        self._stop_event_listener()
         stop_event = threading.Event()
-        subscriber = RedisSearchEventSubscriber(redis_url=state.redis_url, channel=state.events_channel)
+        subscriber = self._subscriber_factory(state.redis_url, state.events_channel)
 
         def handle(event: dict) -> None:
             self._handle_event(event)
 
-        thread = threading.Thread(target=subscriber.listen, args=(stop_event, handle), daemon=True)
-        thread.start()
+        self._event_stop_event = stop_event
+        self._event_thread = threading.Thread(target=subscriber.listen, args=(stop_event, handle), daemon=True)
+        self._event_thread.start()
+
+    def _stop_event_listener(self) -> None:
+        if self._event_stop_event is not None:
+            self._event_stop_event.set()
+        if self._event_thread is not None and self._event_thread is not threading.current_thread():
+            self._event_thread.join(timeout=1.0)
+        self._event_stop_event = None
+        self._event_thread = None
 
     def _start_search(self, state: TuiState) -> None:
         def run() -> None:
             try:
-                exit_code = self._runner.run(state)
-                self._search_started = False
+                self._runner.run(state)
             except Exception as exc:
                 logger.bind(component="tui", error=str(exc)).exception("tui_backend_failed")
                 self._set_proxy("[red]falha[/]")
                 self._set_search("[red]falha[/]")
                 self._set_detail("[red]falha[/]")
                 self._set_save("[red]falha[/]")
+            finally:
+                self._search_started = False
+                self._stop_event_listener()
 
         threading.Thread(target=run, daemon=True).start()
 
