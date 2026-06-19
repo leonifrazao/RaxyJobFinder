@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -11,7 +11,7 @@ class SearchEvent:
     message: str
     level: str = "info"
     payload: dict[str, Any] = field(default_factory=dict)
-    occurred_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    occurred_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return {

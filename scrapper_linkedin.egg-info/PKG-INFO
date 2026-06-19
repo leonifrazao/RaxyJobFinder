@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: scrapper-linkedin
+Version: 0.1.0
+Summary: Buscador de vagas em portais modulares (LinkedIn, Gupy, Glassdoor) com proxy framework
+Requires-Python: >=3.10
+License-File: LICENSE
+Requires-Dist: botasaurus>=1.0.0
+Requires-Dist: dependency-injector>=4.0.0
+Requires-Dist: beautifulsoup4>=4.12.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: urllib3>=2.0.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: pytermgui>=7.7.0
+Requires-Dist: PyYAML>=6.0.0
+Requires-Dist: loguru>=0.7.0
+Requires-Dist: redis>=5.0.0
+Dynamic: license-file
