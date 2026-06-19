@@ -128,7 +128,7 @@ class TestServiceWiring:
         mock_proxy = MagicMock()
         with container.proxy_pool.override(providers.Factory(lambda: mock_proxy)):
             service = container.job_search_service()
-        from job_search.application.job_search_service import JobSearchService
+        from job_search.application.service.job_search_service import JobSearchService
         assert isinstance(service, JobSearchService)
 
     def test_service_injects_dependencies(self, container: JobSearchContainer):

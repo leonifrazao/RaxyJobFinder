@@ -4,9 +4,6 @@ from typing import Any
 
 from loguru import logger
 
-from job_search.application.bridge_search_service import BridgeSearchService
-from job_search.application.job_detailing_service import JobDetailingService
-from job_search.application.search_result_saver import SearchResultSaver
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.application.dto.output.search_result import SearchResult
 from job_search.application.events.noop_search_event_publisher import NoopSearchEventPublisher
@@ -17,6 +14,9 @@ from job_search.application.ports.job_repository import JobRepository
 from job_search.application.ports.job_search_view import JobSearchView
 from job_search.application.ports.proxy_pool import ProxyPool
 from job_search.application.ports.search_event_publisher import SearchEventPublisher
+from job_search.application.service.bridge_search_service import BridgeSearchService
+from job_search.application.service.job_detailing_service import JobDetailingService
+from job_search.application.service.search_result_saver import SearchResultSaver
 from job_search.domain.detailing import JobDetailingSession
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
