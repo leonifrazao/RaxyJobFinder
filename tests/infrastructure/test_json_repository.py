@@ -87,8 +87,8 @@ class TestSaveJobs:
         repo.save_jobs(output, jobs)
         data = json.loads((tmp_path / "with_extra.json").read_text(encoding="utf-8"))
         assert data[0]["modalidade"] == "remoto"
-        assert data[0]["provider_data"]["rating"] == 4.5
-        assert data[0]["provider_data"]["reviews"] == 10
+        assert "rating" not in data[0]
+        assert "reviews" not in data[0]
 
     def test_posting_uses_shared_detail_schema(self, repo: JsonJobRepository, tmp_path: pytest.TempPathFactory):
         jobs = [
@@ -137,9 +137,8 @@ class TestSaveJobs:
             "detail_status_code",
             "detail_html_size",
             "detail_bridge_index",
-            "provider_data",
         ]
         assert data[0]["modalidade"] == "híbrido"
         assert data[0]["detail_title"] == "Analista Senior"
-        assert data[0]["provider_data"]["workplaceType"] == "hybrid"
-        assert data[0]["provider_data"]["id"] == 10
+        assert "workplaceType" not in data[0]
+        assert "id" not in data[0]

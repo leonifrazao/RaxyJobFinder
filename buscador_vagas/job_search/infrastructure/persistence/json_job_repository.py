@@ -56,10 +56,7 @@ class JsonJobRepository:
     def _to_output_dict(self, job: JobPosting | JobSummary) -> dict[str, object]:
         data = job.to_dict()
         fields = SUMMARY_OUTPUT_FIELDS + DETAIL_OUTPUT_FIELDS if isinstance(job, JobPosting) else SUMMARY_OUTPUT_FIELDS
-        canonical = {field: data.get(field, self._default_value(field)) for field in fields}
-        provider_data = {k: v for k, v in data.items() if k not in fields}
-        canonical["provider_data"] = provider_data
-        return canonical
+        return {field: data.get(field, self._default_value(field)) for field in fields}
 
     @staticmethod
     def _default_value(field: str) -> object:
