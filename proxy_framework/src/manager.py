@@ -7,7 +7,7 @@ import socket
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
@@ -41,6 +41,41 @@ from .storage import DEFAULT_CACHE_FILENAME, apply_cached_entry, format_timestam
 __all__ = ["Proxy"]
 
 logger = get_logger()
+
+
+@dataclass
+class _HealthCheckState:
+    stop_on_unique_success: bool
+    success_count: int = 0
+    unique_success_ips: set[str] = field(default_factory=set)
+
+    @staticmethod
+    def _success_ip(entry: ProxyItem) -> Optional[str]:
+        return entry.result.proxy_ip or entry.result.external_ip or entry.result.ip
+
+    def register_success(self, entry: ProxyItem) -> bool:
+        if entry.result.status != "OK":
+            return False
+        if not self.stop_on_unique_success:
+            self.success_count += 1
+            return True
+
+        ip_key = self._success_ip(entry)
+        if not ip_key:
+            entry.result.status = "FILTRADO"
+            entry.result.error = "Proxy funcional sem IP de saida identificavel"
+            return False
+        if ip_key in self.unique_success_ips:
+            entry.result.status = "FILTRADO"
+            entry.result.error = f"IP de saida duplicado: {ip_key}"
+            return False
+
+        self.unique_success_ips.add(ip_key)
+        self.success_count += 1
+        return True
+
+    def reached_limit(self, stop_on_success: Optional[int]) -> bool:
+        return stop_on_success is not None and stop_on_success > 0 and self.success_count >= stop_on_success
 
 
 class Proxy(ProxyService):
@@ -237,124 +272,164 @@ class Proxy(ProxyService):
     ) -> List[ProxyItem]:
         all_results: List[ProxyItem] = []
         reuse_cache = self.use_cache and not force_refresh
-        success_count = 0
-        unique_success_ips: set[str] = set()
+        state = _HealthCheckState(stop_on_unique_success=stop_on_unique_success)
         to_test: List[Tuple[int, str, Outbound]] = []
 
-        def success_ip(entry: ProxyItem) -> Optional[str]:
-            return entry.result.proxy_ip or entry.result.external_ip or entry.result.ip
-
-        def register_success(entry: ProxyItem) -> bool:
-            nonlocal success_count
-            if entry.result.status != "OK":
-                return False
-            if not stop_on_unique_success:
-                success_count += 1
-                return True
-            ip_key = success_ip(entry)
-            if not ip_key:
-                entry.result.status = "FILTRADO"
-                entry.result.error = "Proxy funcional sem IP de saida identificavel"
-                return False
-            if ip_key in unique_success_ips:
-                entry.result.status = "FILTRADO"
-                entry.result.error = f"IP de saida duplicado: {ip_key}"
-                return False
-            unique_success_ips.add(ip_key)
-            success_count += 1
-            return True
-
         for idx, (raw, outbound) in enumerate(outbounds):
-            base_entry = make_base_entry(idx, raw, outbound)
             if reuse_cache and raw in self._cache_entries:
-                entry = apply_cached_entry(base_entry, self._cache_entries[raw])
-                if country_filter and entry.result.status == "OK":
-                    match = self.matches_country(entry, country_filter)
-                    entry.result.country_match = match
-                    if not match:
-                        entry.result.status = "FILTRADO"
-                        exit_country = entry.result.proxy_country or entry.result.country or "-"
-                        entry.result.error = f"Filtro '{country_filter}': pais de saida e {exit_country}"
+                entry = self._entry_from_cache(idx, raw, outbound, country_filter)
                 all_results.append(entry)
-                register_success(entry)
+                state.register_success(entry)
                 if emit_progress:
                     self._emit_test_progress(entry, len(all_results), len(outbounds), emit_progress)
             else:
                 to_test.append((idx, raw, outbound))
 
-        limit_reached = stop_on_success is not None and stop_on_success > 0
-        if limit_reached and success_count >= stop_on_success:
+        if state.reached_limit(stop_on_success):
             for idx, raw, outbound in to_test:
                 all_results.append(make_base_entry(idx, raw, outbound))
             all_results.sort(key=lambda x: x.index)
             return all_results
 
-        def worker(idx: int, raw: str, outbound: Outbound) -> ProxyItem:
-            entry = make_base_entry(idx, raw, outbound)
-            try:
-                entry.host, entry.port = self.network.outbound_host_port(outbound)
-            except Exception:
-                pass
-            entry.result.status = "TESTANDO"
-            result = self.network.test_outbound(raw, outbound, timeout=functional_timeout, test_url=test_url)
-            finished_at = time.time()
-            entry.host = result.get("host") or entry.host
-            if result.get("port") is not None:
-                entry.port = result.get("port")
-            res = entry.result
-            res.ip = result.get("ip") or res.ip
-            res.country = result.get("country") or res.country
-            res.country_code = result.get("country_code") or res.country_code
-            res.country_name = result.get("country_name") or res.country_name
-            res.ping_ms = result.get("ping_ms")
-            res.tested_at_ts = finished_at
-            res.tested_at = format_timestamp(finished_at)
-            res.functional = result.get("functional", False)
-            res.external_ip = result.get("external_ip")
-            res.proxy_ip = result.get("proxy_ip")
-            res.proxy_country = result.get("proxy_country")
-            res.proxy_country_code = result.get("proxy_country_code")
-            if res.functional:
-                res.status = "OK"
-                res.error = None
-            else:
-                res.status = "ERRO"
-                res.error = result.get("error", "Teste falhou")
-            if country_filter and res.status == "OK":
-                res.country_match = self.matches_country(entry, country_filter)
-                if not res.country_match:
-                    res.status = "FILTRADO"
-                    exit_country = res.proxy_country or res.country or "-"
-                    res.error = f"Filtro '{country_filter}': pais de saida e {exit_country}"
-            return entry
-
         if to_test:
-            max_workers = threads if threads and threads > 0 else 1
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                futures = {executor.submit(worker, idx, raw, outbound) for idx, raw, outbound in to_test}
-                tested_indices = set()
-                for future in as_completed(futures):
-                    try:
-                        result_entry = future.result()
-                    except Exception as exc:
-                        logger.exception("Erro fatal em teste de proxy: %s", exc)
-                        continue
-                    all_results.append(result_entry)
-                    tested_indices.add(result_entry.index)
-                    register_success(result_entry)
-                    if emit_progress:
-                        self._emit_test_progress(result_entry, len(all_results), len(outbounds), emit_progress)
-                    if limit_reached and success_count >= stop_on_success:
-                        for f in futures:
-                            if not f.done():
-                                f.cancel()
-                        break
-                for idx, raw, outbound in to_test:
-                    if idx not in tested_indices:
-                        all_results.append(make_base_entry(idx, raw, outbound))
+            tested_indices = self._run_health_check_workers(
+                to_test,
+                all_results=all_results,
+                state=state,
+                country_filter=country_filter,
+                emit_progress=emit_progress,
+                functional_timeout=functional_timeout,
+                test_url=test_url,
+                threads=threads,
+                stop_on_success=stop_on_success,
+                total_count=len(outbounds),
+            )
+            for idx, raw, outbound in to_test:
+                if idx not in tested_indices:
+                    all_results.append(make_base_entry(idx, raw, outbound))
 
         all_results.sort(key=lambda x: x.index)
         return all_results
+
+    def _entry_from_cache(
+        self,
+        idx: int,
+        raw: str,
+        outbound: Outbound,
+        country_filter: Optional[str],
+    ) -> ProxyItem:
+        entry = apply_cached_entry(make_base_entry(idx, raw, outbound), self._cache_entries[raw])
+        self._apply_country_filter(entry, country_filter)
+        return entry
+
+    def _run_health_check_workers(
+        self,
+        to_test: List[Tuple[int, str, Outbound]],
+        *,
+        all_results: List[ProxyItem],
+        state: _HealthCheckState,
+        country_filter: Optional[str],
+        emit_progress: Optional[Any],
+        functional_timeout: float,
+        test_url: str,
+        threads: Optional[int],
+        stop_on_success: Optional[int],
+        total_count: int,
+    ) -> set[int]:
+        max_workers = threads if threads and threads > 0 else 1
+        tested_indices: set[int] = set()
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    self._test_outbound_entry,
+                    idx,
+                    raw,
+                    outbound,
+                    country_filter=country_filter,
+                    functional_timeout=functional_timeout,
+                    test_url=test_url,
+                )
+                for idx, raw, outbound in to_test
+            }
+            for future in as_completed(futures):
+                try:
+                    result_entry = future.result()
+                except Exception as exc:
+                    logger.exception("Erro fatal em teste de proxy: %s", exc)
+                    continue
+
+                all_results.append(result_entry)
+                tested_indices.add(result_entry.index)
+                state.register_success(result_entry)
+                if emit_progress:
+                    self._emit_test_progress(result_entry, len(all_results), total_count, emit_progress)
+                if state.reached_limit(stop_on_success):
+                    for pending_future in futures:
+                        if not pending_future.done():
+                            pending_future.cancel()
+                    break
+        return tested_indices
+
+    def _test_outbound_entry(
+        self,
+        idx: int,
+        raw: str,
+        outbound: Outbound,
+        *,
+        country_filter: Optional[str],
+        functional_timeout: float,
+        test_url: str,
+    ) -> ProxyItem:
+        entry = make_base_entry(idx, raw, outbound)
+        try:
+            entry.host, entry.port = self.network.outbound_host_port(outbound)
+        except Exception:
+            pass
+
+        entry.result.status = "TESTANDO"
+        result = self.network.test_outbound(raw, outbound, timeout=functional_timeout, test_url=test_url)
+        self._apply_test_result(entry, result, time.time())
+        self._apply_country_filter(entry, country_filter)
+        return entry
+
+    @staticmethod
+    def _apply_test_result(entry: ProxyItem, result: Dict[str, Any], finished_at: float) -> None:
+        entry.host = result.get("host") or entry.host
+        if result.get("port") is not None:
+            entry.port = result.get("port")
+
+        res = entry.result
+        res.ip = result.get("ip") or res.ip
+        res.country = result.get("country") or res.country
+        res.country_code = result.get("country_code") or res.country_code
+        res.country_name = result.get("country_name") or res.country_name
+        res.ping_ms = result.get("ping_ms")
+        res.tested_at_ts = finished_at
+        res.tested_at = format_timestamp(finished_at)
+        res.functional = result.get("functional", False)
+        res.external_ip = result.get("external_ip")
+        res.proxy_ip = result.get("proxy_ip")
+        res.proxy_country = result.get("proxy_country")
+        res.proxy_country_code = result.get("proxy_country_code")
+        if res.functional:
+            res.status = "OK"
+            res.error = None
+            return
+
+        res.status = "ERRO"
+        res.error = result.get("error", "Teste falhou")
+
+    def _apply_country_filter(self, entry: ProxyItem, country_filter: Optional[str]) -> None:
+        if not country_filter or entry.result.status != "OK":
+            return
+
+        entry.result.country_match = self.matches_country(entry, country_filter)
+        if entry.result.country_match:
+            return
+
+        entry.result.status = "FILTRADO"
+        exit_country = entry.result.proxy_country or entry.result.country or "-"
+        entry.result.error = f"Filtro '{country_filter}': pais de saida e {exit_country}"
 
     def _emit_test_progress(self, entry: ProxyItem, count: int, total: int, emit_progress: Any) -> None:
         destino = self._format_destination(entry.host, entry.port)
@@ -501,48 +576,9 @@ class Proxy(ProxyService):
             self.test(threads=threads or 1, country=country_filter, verbose=self.use_console, find_first=find_first)
             country_filter = self.country_filter
 
-        approved_entries = [
-            entry for entry in self._entries
-            if entry.result.status == "OK" and self.matches_country(entry, country_filter)
-        ]
-        approved_entries.sort(key=lambda entry: float(entry.result.ping_ms) if isinstance(entry.result.ping_ms, (int, float)) else float("inf"))
-
-        if not approved_entries:
-            if country_filter:
-                raise RuntimeError(f"Nenhuma proxy aprovada para o pais '{country_filter}'.")
-            raise RuntimeError("Nenhuma proxy aprovada para iniciar. Execute test() e verifique os resultados.")
-
-        if amounts is not None:
-            if not isinstance(amounts, int) or amounts <= 0:
-                raise ValueError("amounts deve ser um inteiro positivo.")
-            approved_entries = approved_entries[:amounts]
-
-        xray_bin = self.process.which_xray()
+        approved_entries = self._approved_entries(country_filter, amounts)
         self._stop_event.clear()
-        bridges_runtime: List[BridgeRuntime] = []
-
-        try:
-            for entry in approved_entries:
-                raw_uri, outbound = self._outbounds[entry.index]
-                port = self.process.find_available_port()
-                cfg = self.process.make_xray_config_http_inbound(port, outbound)
-                scheme = raw_uri.split("://", 1)[0].lower()
-                proc, cfg_path = self.process.launch_bridge_with_diagnostics(xray_bin, cfg, outbound.tag)
-                self._wait_for_bridge_port(port, proc)
-                bridges_runtime.append(BridgeRuntime(
-                    tag=outbound.tag,
-                    port=port,
-                    scheme=scheme,
-                    uri=raw_uri,
-                    process=proc,
-                    workdir=cfg_path.parent,
-                ))
-        except Exception:
-            for bridge in bridges_runtime:
-                self.process.terminate_process(bridge.process)
-                self.process.safe_remove_dir(bridge.workdir)
-                self.process.release_port(bridge.port)
-            raise
+        bridges_runtime = self._start_bridges(approved_entries)
 
         self._bridges = bridges_runtime
         self._running = True
@@ -556,6 +592,61 @@ class Proxy(ProxyService):
         else:
             self._start_wait_thread()
         return active_proxies
+
+    def _approved_entries(self, country_filter: Optional[str], amounts: Optional[int]) -> List[ProxyItem]:
+        entries = [
+            entry for entry in self._entries
+            if entry.result.status == "OK" and self.matches_country(entry, country_filter)
+        ]
+        entries.sort(key=self._entry_ping_sort_key)
+
+        if not entries:
+            if country_filter:
+                raise RuntimeError(f"Nenhuma proxy aprovada para o pais '{country_filter}'.")
+            raise RuntimeError("Nenhuma proxy aprovada para iniciar. Execute test() e verifique os resultados.")
+
+        if amounts is None:
+            return entries
+        if not isinstance(amounts, int) or amounts <= 0:
+            raise ValueError("amounts deve ser um inteiro positivo.")
+        return entries[:amounts]
+
+    @staticmethod
+    def _entry_ping_sort_key(entry: ProxyItem) -> float:
+        ping = entry.result.ping_ms
+        return float(ping) if isinstance(ping, (int, float)) else float("inf")
+
+    def _start_bridges(self, entries: List[ProxyItem]) -> List[BridgeRuntime]:
+        xray_bin = self.process.which_xray()
+        bridges_runtime: List[BridgeRuntime] = []
+        try:
+            for entry in entries:
+                bridges_runtime.append(self._start_bridge(entry, xray_bin))
+        except Exception:
+            self._cleanup_bridges(bridges_runtime)
+            raise
+        return bridges_runtime
+
+    def _start_bridge(self, entry: ProxyItem, xray_bin: str) -> BridgeRuntime:
+        raw_uri, outbound = self._outbounds[entry.index]
+        port = self.process.find_available_port()
+        cfg = self.process.make_xray_config_http_inbound(port, outbound)
+        proc, cfg_path = self.process.launch_bridge_with_diagnostics(xray_bin, cfg, outbound.tag)
+        self._wait_for_bridge_port(port, proc)
+        return BridgeRuntime(
+            tag=outbound.tag,
+            port=port,
+            scheme=raw_uri.split("://", 1)[0].lower(),
+            uri=raw_uri,
+            process=proc,
+            workdir=cfg_path.parent,
+        )
+
+    def _cleanup_bridges(self, bridges: Iterable[BridgeRuntime]) -> None:
+        for bridge in bridges:
+            self.process.terminate_process(bridge.process)
+            self.process.safe_remove_dir(bridge.workdir)
+            self.process.release_port(bridge.port)
 
     def _start_wait_thread(self) -> None:
         if self._wait_thread and self._wait_thread.is_alive():

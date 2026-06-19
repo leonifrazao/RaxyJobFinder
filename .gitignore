@@ -1,9 +1,14 @@
 __pycache__/
 *.py[cod]
 .venv/
-.venv/
 proxy_cache.json
 /output/
 error_logs/
 logs/
 *.html
+/build/
+/scrapper_linkedin.egg-info/
+/.codebase-memory/
+/dump.rdb
+/out.json
+/path
