@@ -24,7 +24,7 @@ Requer **Python 3.10+** e o binário do [Xray](https://github.com/XTLS/Xray-core
 docker build -t raxy .
 ```
 
-A imagem já empacota Python, dependências e o Xray-core. Use:
+A imagem já empacota Python, dependências, Redis e o Xray-core. Use:
 
 ```bash
 docker run --rm -it -v "$PWD/output:/app/output" raxy --keywords "Python" --portal linkedin

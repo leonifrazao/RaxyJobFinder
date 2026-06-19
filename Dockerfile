@@ -13,6 +13,7 @@ FROM python:3.13-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         libstdc++6 \
+        redis-server \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=xray /opt/xray /opt/xray
@@ -32,5 +33,10 @@ RUN python -c "import urllib.request, os; url='https://github.com/daijro/hreques
 
 ENV PYTHONPATH=/app/proxy_framework:/app/buscador_vagas
 
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'redis-server --daemonize yes' >> /entrypoint.sh && \
+    echo 'exec python /app/buscador_vagas/buscador.py "$@"' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
 WORKDIR /app
-ENTRYPOINT ["python", "buscador_vagas/buscador.py"]
+ENTRYPOINT ["/entrypoint.sh"]
