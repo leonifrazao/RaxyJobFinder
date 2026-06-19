@@ -340,7 +340,7 @@ class TestTuiApp:
         for k in keys:
             app._fields[k] = SettableField(app._fields[k].value)
         app._reset_fields()
-        defaults = TuiState()
+        defaults = TuiState.from_config()
         assert app._fields["portal"].value == defaults.portal
         assert app._fields["keywords"].value == defaults.keywords
         assert app._fields["valid_count"].value == str(defaults.valid_count)

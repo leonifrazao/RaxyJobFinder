@@ -1,17 +1,36 @@
 from __future__ import annotations
 
+import socket
+from urllib.parse import urlparse
 from typing import Any
 
 from botasaurus.request import Request, request as botasaurus_request
+from botasaurus_requests.exceptions import ClientException
 
 from job_search.application.dto.output.http_response import HttpResponse
+from job_search.infrastructure.config import load_settings
 
 
 class BotasaurusHttpClient:
     def _to_cookies(self, jar: Any) -> dict[str, str]:
         return {c.name: c.value for c in jar} if jar else {}
 
+    @staticmethod
+    def _check_bridge_reachable(bridge_url: str) -> None:
+        parsed = urlparse(bridge_url)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or 80
+        try:
+            with socket.create_connection((host, port), timeout=load_settings().proxy.detection_timeout):
+                pass
+        except OSError as exc:
+            raise RuntimeError(
+                f"Ponte proxy {bridge_url} inalcancavel: {exc}. "
+                "O Xray pode nao estar rodando ou a porta esta bloqueada."
+            ) from exc
+
     def get(self, bridge_url: str, url: str, timeout: float, *, headers: dict[str, Any] | None = None, max_retry: int = 1) -> HttpResponse:
+        self._check_bridge_reachable(bridge_url)
         @botasaurus_request(
             proxy=bridge_url,
             output=None,
@@ -32,7 +51,12 @@ class BotasaurusHttpClient:
                 "cookies": dict(response.cookies) if hasattr(response, "cookies") else {},
             }
 
-        result = request_task({"url": url, "timeout": timeout, "headers": headers or {}})
+        try:
+            result = request_task({"url": url, "timeout": timeout, "headers": headers or {}})
+        except ClientException as exc:
+            raise RuntimeError(
+                f"Proxy {bridge_url} falhou no GET {url}: {exc}"
+            ) from exc
         if result is None:
             raise RuntimeError("request retornou sem resposta")
         return HttpResponse(
@@ -44,6 +68,7 @@ class BotasaurusHttpClient:
         )
 
     def post(self, bridge_url: str, url: str, timeout: float, *, json_body: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, max_retry: int = 1) -> HttpResponse:
+        self._check_bridge_reachable(bridge_url)
         @botasaurus_request(
             proxy=bridge_url,
             output=None,
@@ -73,7 +98,12 @@ class BotasaurusHttpClient:
                 "cookies": dict(response.cookies) if hasattr(response, "cookies") else {},
             }
 
-        result = request_task({"url": url, "timeout": timeout, "headers": headers or {}, "json_body": json_body})
+        try:
+            result = request_task({"url": url, "timeout": timeout, "headers": headers or {}, "json_body": json_body})
+        except ClientException as exc:
+            raise RuntimeError(
+                f"Proxy {bridge_url} falhou no POST {url}: {exc}"
+            ) from exc
         if result is None:
             raise RuntimeError("request retornou sem resposta")
         return HttpResponse(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import fields
 
+from job_search.infrastructure.config import load_settings
 from job_search.interfaces.tui.tui_state import TuiState
 
 
@@ -10,7 +11,7 @@ class TestTuiState:
         state = TuiState()
 
         assert state.portal == "linkedin"
-        assert state.keywords == "Python"
+        assert state.keywords == "Vagas"
         assert state.location == "Brasil"
         assert state.location_id == ""
         assert state.location_choice == "1"
@@ -31,8 +32,42 @@ class TestTuiState:
         assert state.details_output == "output/linkedin/detalhadas.json"
         assert state.redis_url == "redis://localhost:6379/0"
         assert state.events_channel == "raxy:events"
-        assert state.provider is not None and len(state.provider) > 0
-        assert state.timeout == state.detail_timeout
+
+    def test_from_config_matches_yaml(self):
+        cfg = load_settings().defaults
+        state = TuiState.from_config()
+
+        assert state.portal == cfg.portal
+        assert state.keywords == cfg.keywords
+        assert state.location == cfg.location
+        assert state.valid_count == cfg.valid_count
+        assert state.jobs_per_proxy == cfg.jobs_per_proxy
+        assert state.max_count == cfg.max_count
+        assert state.threads == cfg.threads
+        assert state.timeout == cfg.timeout
+        assert state.detail_timeout == cfg.detail_timeout
+        assert state.details_limit == cfg.details_limit
+        assert state.start == cfg.start
+        assert state.max_jobs == cfg.max_jobs
+        assert state.detail_threads == cfg.detail_threads
+        assert state.show_jobs == cfg.show_jobs
+        assert state.gd_cookie == cfg.gd_cookie
+        assert state.filters_path == cfg.filters_path
+
+    def test_from_config_sets_provider(self):
+        state = TuiState.from_config()
+        assert state.provider == load_settings().proxy.default_provider
+
+    def test_from_config_sets_output_paths(self):
+        state = TuiState.from_config()
+        portal = load_settings().defaults.portal
+        assert state.jobs_output == f"output/{portal}/vagas.json"
+        assert state.details_output == f"output/{portal}/detalhadas.json"
+
+    def test_from_config_sets_redis(self):
+        state = TuiState.from_config()
+        assert state.redis_url == load_settings().redis.url
+        assert state.events_channel == load_settings().redis.channel
 
     def test_is_dataclass(self):
         state = TuiState()
@@ -62,24 +97,6 @@ class TestTuiState:
         assert state.location == "RJ"
         assert state.valid_count == 10
         assert state.timeout == 30.0
-
-    def test_redis_env_override(self, monkeypatch):
-        import importlib
-
-        monkeypatch.setenv("RAXY_REDIS_URL", "redis://custom:6379/1")
-        monkeypatch.setenv("RAXY_REDIS_CHANNEL", "custom:channel")
-        importlib.reload(importlib.import_module("job_search.interfaces.tui.tui_state"))
-        from job_search.interfaces.tui.tui_state import TuiState as ReloadedState
-
-        state = ReloadedState()
-        assert state.redis_url == "redis://custom:6379/1"
-        assert state.events_channel == "custom:channel"
-
-    def test_provider_default_constant(self):
-        from job_search.infrastructure.proxy.proxy_sources import DEFAULT_PROVIDER
-
-        state = TuiState()
-        assert state.provider == DEFAULT_PROVIDER
 
     def test_detail_timeout_matches_timeout(self):
         state = TuiState()

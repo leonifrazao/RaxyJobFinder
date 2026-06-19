@@ -1,0 +1,110 @@
+defaults:
+  portal: linkedin
+  keywords: "Vagas"
+  location: "Brasil"
+  valid_count: 25
+  jobs_per_proxy: 5
+  max_count: 177
+  threads: 8
+  timeout: 12.0
+  detail_timeout: 15.0
+  details_limit: 0
+  start: 0
+  max_jobs: 0
+  detail_threads: 5
+  show_jobs: 10
+  silent: true
+  gd_cookie: ""
+  filters_path: ""
+  location_id: ""
+  location_choice: "1"
+
+output:
+  jobs_path: "output/{portal}/vagas.json"
+  details_path: "output/{portal}/detalhadas.json"
+
+proxy:
+  detection_timeout: 3.0
+  default_provider: united-states
+  providers:
+    united-states: "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-country/United_States.txt"
+    brazil: "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-country/Brazil.txt"
+    canada: "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-country/Canada.txt"
+    germany: "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-country/Germany.txt"
+    netherlands: "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-country/Netherlands.txt"
+    all: "https://raw.githubusercontent.com/F0rc3Run/F0rc3Run/refs/heads/main/splitted-by-country"
+  all_countries:
+    - Albania
+    - Australia
+    - Bosnia_and_Herzegovina
+    - Brazil
+    - Bulgaria
+    - Canada
+    - Czechia
+    - Finland
+    - France
+    - Georgia
+    - Germany
+    - Hong_Kong
+    - Hungary
+    - India
+    - Ireland
+    - Israel
+    - Italy
+    - Japan
+    - Latvia
+    - Malaysia
+    - Moldova
+    - Netherlands
+    - Norway
+    - Philippines
+    - Poland
+    - Russia
+    - Serbia
+    - Singapore
+    - South_Africa
+    - South_Korea
+    - Spain
+    - Sweden
+    - Switzerland
+    - Taiwan
+    - Thailand
+    - Turkey
+    - United_Arab_Emirates
+    - United_Kingdom
+    - United_States
+    - Unknown
+
+redis:
+  url: "redis://localhost:6379/0"
+  channel: "raxy:events"
+
+logging:
+  level: INFO
+  path: "logs/raxy.jsonl"
+  error_path: "logs/raxy-error.log"
+
+portals:
+  - linkedin
+  - gupy
+  - glassdoor
+
+tui:
+  window_width: 84
+  window_box: DOUBLE
+  window_title: "[210 bold]Raxy TUI"
+  help_window_width: 76
+  error_window_width: 60
+  pytermgui_config:
+    config:
+      Label:
+        styles:
+          value: dim bold
+      InputField:
+        styles:
+          prompt: dim italic
+          cursor: '@72'
+      Window:
+        styles:
+          border: '60'
+          corner: '60'

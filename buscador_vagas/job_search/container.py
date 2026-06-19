@@ -3,6 +3,7 @@ from __future__ import annotations
 from dependency_injector import containers, providers
 
 from job_search.application import JobSearchService
+from job_search.infrastructure.config import load_settings
 from job_search.infrastructure.http.botasaurus_http_client import BotasaurusHttpClient
 from job_search.infrastructure.messaging import build_search_event_publisher
 from job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
@@ -29,7 +30,7 @@ class JobSearchContainer(containers.DeclarativeContainer):
     proxy_pool = providers.Factory(
         ProxyFrameworkPool,
         provider_name=config.provider_name,
-        use_console=True,
+        use_console=load_settings().defaults.silent is False,
     )
 
     linkedin_adapter = providers.Factory(

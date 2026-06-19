@@ -5,6 +5,7 @@ import os
 from buscador_vagas.job_search.application.dto.input.job_search_request import JobSearchRequest
 from buscador_vagas.job_search.domain.filtering import JobFilterSet
 from buscador_vagas.job_search.domain.job_posting import JobPosting
+from buscador_vagas.job_search.infrastructure.config import load_settings
 from buscador_vagas.job_search.infrastructure.logging import configure_logging
 from buscador_vagas.job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
 from buscador_vagas.job_search.infrastructure.proxy.proxy_sources import DEFAULT_PROVIDER, resolve_proxy_sources
@@ -18,33 +19,55 @@ class JobFinder:
 
     def __init__(
         self,
-        portal: str = "linkedin",
-        keywords: str = "Vagas",
-        location: str = "Brasil",
+        portal: str | None = None,
+        keywords: str | None = None,
+        location: str | None = None,
         *,
         location_id: str | None = None,
         location_choice: int | None = None,
         proxy_sources: list[str] | None = None,
-        proxy_provider: str = DEFAULT_PROVIDER,
-        valid_count: int = 25,
-        jobs_per_proxy: int = 5,
-        max_count: int = 177,
-        threads: int = 8,
-        timeout: float = 12.0,
-        detail_timeout: float = 5.0,
+        proxy_provider: str | None = None,
+        valid_count: int | None = None,
+        jobs_per_proxy: int | None = None,
+        max_count: int | None = None,
+        threads: int | None = None,
+        timeout: float | None = None,
+        detail_timeout: float | None = None,
         filters: JobFilterSet | str | None = None,
         filters_path: str | None = None,
-        details_limit: int = 0,
-        start: int = 0,
-        max_jobs: int = 0,
-        detail_threads: int = 5,
-        gd_cookie: str = "",
-        silent: bool = True,
+        details_limit: int | None = None,
+        start: int | None = None,
+        max_jobs: int | None = None,
+        detail_threads: int | None = None,
+        gd_cookie: str | None = None,
+        silent: bool | None = None,
     ):
         from dependency_injector import providers
         from loguru import logger
 
         from buscador_vagas.job_search.container import JobSearchContainer
+
+        cfg = load_settings().defaults
+
+        portal = portal or cfg.portal
+        keywords = keywords or cfg.keywords
+        location = location or cfg.location
+        location_id = location_id or cfg.location_id or None
+        location_choice = location_choice or cfg.location_choice or None
+        proxy_provider = proxy_provider or DEFAULT_PROVIDER
+        valid_count = valid_count if valid_count is not None else cfg.valid_count
+        jobs_per_proxy = jobs_per_proxy if jobs_per_proxy is not None else cfg.jobs_per_proxy
+        max_count = max_count if max_count is not None else cfg.max_count
+        threads = threads if threads is not None else cfg.threads
+        timeout = timeout if timeout is not None else cfg.timeout
+        detail_timeout = detail_timeout if detail_timeout is not None else cfg.detail_timeout
+        details_limit = details_limit if details_limit is not None else cfg.details_limit
+        start = start if start is not None else cfg.start
+        max_jobs = max_jobs if max_jobs is not None else cfg.max_jobs
+        detail_threads = detail_threads if detail_threads is not None else cfg.detail_threads
+        gd_cookie = gd_cookie if gd_cookie is not None else cfg.gd_cookie
+        silent = silent if silent is not None else cfg.silent
+
         configure_logging()
         if portal not in self.PORTALS:
             raise ValueError(
@@ -85,12 +108,14 @@ class JobFinder:
             self._filters_path = None
             self._filter_set = None
 
+        redis_cfg = load_settings().redis
+
         self._container = JobSearchContainer()
         self._container.config.portal_name.from_value(portal)
         self._container.config.provider_name.from_value(proxy_provider)
         self._container.config.gd_cookie.from_value(gd_cookie)
-        self._container.config.redis_url.from_value(os.getenv("RAXY_REDIS_URL", "redis://localhost:6379/0"))
-        self._container.config.events_channel.from_value(os.getenv("RAXY_REDIS_CHANNEL", "raxy:events"))
+        self._container.config.redis_url.from_value(os.getenv("RAXY_REDIS_URL", redis_cfg.url))
+        self._container.config.events_channel.from_value(os.getenv("RAXY_REDIS_CHANNEL", redis_cfg.channel))
         logger.bind(
             component="sdk",
             portal=portal,
@@ -123,6 +148,8 @@ class JobFinder:
     ) -> list[JobPosting]:
         from loguru import logger
 
+        output_cfg = load_settings().output
+
         if isinstance(filters, JobFilterSet):
             self._filter_repo.filter_set = filters
             effective_filters_path: str | None = None
@@ -134,9 +161,9 @@ class JobFinder:
             effective_filters_path = self._filters_path
 
         if jobs_output is None:
-            jobs_output = f"output/{self._portal}/vagas.json"
+            jobs_output = output_cfg.jobs_path.format(portal=self._portal)
         if details_output is None:
-            details_output = f"output/{self._portal}/detalhadas.json"
+            details_output = output_cfg.details_path.format(portal=self._portal)
 
         request = JobSearchRequest(
             proxy_sources=self._proxy_sources,
