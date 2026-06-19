@@ -23,7 +23,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -e .
+          pip install .
           pip install -e ./proxy_framework
           pip install pytest
 
