@@ -9,8 +9,10 @@ from loguru import logger
 from redis import Redis
 from redis.exceptions import RedisError
 
+from job_search.application.ports import SearchEventSubscriber
 
-class RedisSearchEventSubscriber:
+
+class RedisSearchEventSubscriber(SearchEventSubscriber):
     def __init__(self, *, redis_url: str, channel: str, socket_timeout: float = 0.5) -> None:
         self.channel = channel
         self._client = Redis.from_url(

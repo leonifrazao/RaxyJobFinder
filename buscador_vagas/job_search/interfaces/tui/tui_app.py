@@ -8,6 +8,7 @@ import pytermgui as ptg
 from loguru import logger
 
 from job_search.application.events import SearchEventName
+from job_search.application.ports import SearchEventSubscriber
 from job_search.infrastructure.config import load_settings
 from job_search.infrastructure.logging import resolve_error_log_path
 from job_search.infrastructure.messaging.redis_search_event_subscriber import RedisSearchEventSubscriber
@@ -18,7 +19,7 @@ from job_search.interfaces.tui.tui_state import TuiState
 PENDING = "[dim]aguardando...[/]"
 PROCESSING = "[yellow]processando...[/]"
 
-SubscriberFactory = Callable[[str, str], RedisSearchEventSubscriber]
+SubscriberFactory = Callable[[str, str], SearchEventSubscriber]
 
 
 class TuiApp:
@@ -51,7 +52,7 @@ class TuiApp:
             self._stop_event_listener()
 
     @staticmethod
-    def _build_subscriber(redis_url: str, channel: str) -> RedisSearchEventSubscriber:
+    def _build_subscriber(redis_url: str, channel: str) -> SearchEventSubscriber:
         return RedisSearchEventSubscriber(redis_url=redis_url, channel=channel)
 
     def _run_window(self) -> None:
