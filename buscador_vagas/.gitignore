@@ -3,5 +3,5 @@ __pycache__/
 .venv/
 linkedin_response.html
 proxy_cache.json
-output/
+/output/
 error_logs/

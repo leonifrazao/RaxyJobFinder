@@ -3,7 +3,7 @@ __pycache__/
 .venv/
 .venv/
 proxy_cache.json
-output/
+/output/
 error_logs/
 logs/
 *.html
