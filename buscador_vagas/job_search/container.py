@@ -4,6 +4,7 @@ from dependency_injector import containers, providers
 
 from job_search.application import JobSearchService
 from job_search.infrastructure.http.botasaurus_http_client import BotasaurusHttpClient
+from job_search.infrastructure.messaging import build_search_event_publisher
 from job_search.infrastructure.persistence.json_job_filter_repository import JsonJobFilterRepository
 from job_search.infrastructure.persistence.json_job_repository import JsonJobRepository
 from job_search.infrastructure.proxy.proxy_framework_pool import ProxyFrameworkPool
@@ -20,6 +21,11 @@ class JobSearchContainer(containers.DeclarativeContainer):
     view = providers.Singleton(RichJobSearchView)
     repository = providers.Factory(JsonJobRepository)
     filter_repository = providers.Factory(JsonJobFilterRepository)
+    event_publisher = providers.Factory(
+        build_search_event_publisher,
+        redis_url=config.redis_url,
+        channel=config.events_channel,
+    )
     proxy_pool = providers.Factory(
         ProxyFrameworkPool,
         provider_name=config.provider_name,
@@ -56,4 +62,5 @@ class JobSearchContainer(containers.DeclarativeContainer):
         repository=repository,
         filter_repository=filter_repository,
         view=view,
+        event_publisher=event_publisher,
     )

@@ -52,6 +52,14 @@ def service(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_reposito
     return JobSearchService(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view)
 
 
+class FakeEventPublisher:
+    def __init__(self) -> None:
+        self.events = []
+
+    def publish(self, event) -> None:
+        self.events.append(event)
+
+
 @pytest.fixture
 def sample_jobs():
     return [JobSummary("linkedin", f"ext-{i}", f"Job {i}") for i in range(3)]
@@ -111,6 +119,25 @@ class TestJobSearchService:
         assert result == 0
         mock_repository.save_jobs.assert_any_call("output/vagas.json", [])
         mock_repository.save_jobs.assert_any_call("output/detalhadas.json", [])
+
+    def test_run_publishes_events(self, mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, sample_request):
+        publisher = FakeEventPublisher()
+        service = JobSearchService(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, publisher)
+        mock_adapter.get_location_options.return_value = []
+        mock_adapter.search_jobs.return_value = SearchResult(
+            query=SearchQuery("Python", "Brasil"),
+            search_url="http://url",
+            response=HttpResponse(200, "http://url", {}, "<html/>"),
+            jobs=[],
+        )
+
+        service.run(sample_request)
+
+        event_names = [event.name for event in publisher.events]
+        assert "job_search_started" in event_names
+        assert "bridges_prepared" in event_names
+        assert "search_bridge_succeeded" in event_names
+        assert "job_search_no_jobs" in event_names
 
     def test_prepare_bridges(self, service, mock_proxy_pool, sample_request):
         query = SearchQuery("Python", "Brasil")

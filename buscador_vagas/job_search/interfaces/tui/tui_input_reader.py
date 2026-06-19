@@ -19,9 +19,12 @@ class TuiInputReader:
             detail_timeout=self._float(fields["detail_timeout"]),
             max_jobs=self._int(fields["max_jobs"]),
             details_limit=self._int(fields["details_limit"]),
+            detail_threads=self._int(fields["detail_threads"]),
             show_jobs=self._int(fields["show_jobs"]),
             jobs_output=self._text(fields["jobs_output"]),
             details_output=self._text(fields["details_output"]),
+            redis_url=self._text(fields["redis_url"]),
+            events_channel=self._text(fields["events_channel"]),
         )
 
     @staticmethod

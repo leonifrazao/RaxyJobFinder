@@ -24,9 +24,12 @@ class TestTuiInputReader:
             "detail_timeout": Field("8"),
             "max_jobs": Field("3"),
             "details_limit": Field("1"),
+            "detail_threads": Field("5"),
             "show_jobs": Field("3"),
             "jobs_output": Field("jobs.json"),
             "details_output": Field("details.json"),
+            "redis_url": Field("redis://localhost:6379/0"),
+            "events_channel": Field("raxy:events"),
         }
 
         state = TuiInputReader().read(fields)
@@ -35,6 +38,8 @@ class TestTuiInputReader:
         assert state.valid_count == 1
         assert state.timeout == 15.0
         assert state.jobs_output == "jobs.json"
+        assert state.redis_url == "redis://localhost:6379/0"
+        assert state.events_channel == "raxy:events"
 
     def test_raises_on_invalid_number(self):
         fields = {
@@ -49,9 +54,12 @@ class TestTuiInputReader:
             "detail_timeout": Field("8"),
             "max_jobs": Field("3"),
             "details_limit": Field("1"),
+            "detail_threads": Field("5"),
             "show_jobs": Field("3"),
             "jobs_output": Field("jobs.json"),
             "details_output": Field("details.json"),
+            "redis_url": Field("redis://localhost:6379/0"),
+            "events_channel": Field("raxy:events"),
         }
 
         with pytest.raises(ValueError):

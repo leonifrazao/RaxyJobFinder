@@ -4,6 +4,7 @@ from .job_filter_repository import JobFilterRepository
 from .job_repository import JobRepository
 from .job_search_view import JobSearchView
 from .proxy_pool import ProxyPool
+from .search_event_publisher import SearchEventPublisher
 
 __all__ = [
     "HttpClient",
@@ -12,4 +13,5 @@ __all__ = [
     "JobRepository",
     "JobSearchView",
     "ProxyPool",
+    "SearchEventPublisher",
 ]

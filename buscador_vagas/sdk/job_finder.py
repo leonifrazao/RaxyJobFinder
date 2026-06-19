@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from buscador_vagas.job_search.application.dto.input.job_search_request import JobSearchRequest
 from buscador_vagas.job_search.domain.filtering import JobFilterSet
 from buscador_vagas.job_search.domain.job_posting import JobPosting
@@ -87,6 +89,8 @@ class JobFinder:
         self._container.config.portal_name.from_value(portal)
         self._container.config.provider_name.from_value(proxy_provider)
         self._container.config.gd_cookie.from_value(gd_cookie)
+        self._container.config.redis_url.from_value(os.getenv("RAXY_REDIS_URL", "redis://localhost:6379/0"))
+        self._container.config.events_channel.from_value(os.getenv("RAXY_REDIS_CHANNEL", "raxy:events"))
         logger.bind(
             component="sdk",
             portal=portal,

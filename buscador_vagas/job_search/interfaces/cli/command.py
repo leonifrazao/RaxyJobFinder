@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from loguru import logger
@@ -65,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
     container.config.portal_name.from_value(portal)
     container.config.provider_name.from_value(args.provider)
     container.config.gd_cookie.from_value(args.gd_cookie)
+    container.config.redis_url.from_value(os.getenv("RAXY_REDIS_URL", "redis://localhost:6379/0"))
+    container.config.events_channel.from_value(os.getenv("RAXY_REDIS_CHANNEL", "raxy:events"))
     service = container.job_search_service()
     view = container.view()
     request = JobSearchRequest(
