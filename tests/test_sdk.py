@@ -228,6 +228,14 @@ class TestJobFinder:
         request = mock_service.run.call_args[0][0]
         assert request.location_id == "106057199"
 
+    def test_work_type_passed_through(self, mock_deps):
+        _, mock_service = mock_deps
+        finder = JobFinder(work_type="remote")
+        finder.search()
+
+        request = mock_service.run.call_args[0][0]
+        assert request.work_type == "remote"
+
     def test_filters_path_string_in_init(self, mock_deps):
         _, mock_service = mock_deps
         finder = JobFinder(filters="filters/python.json")

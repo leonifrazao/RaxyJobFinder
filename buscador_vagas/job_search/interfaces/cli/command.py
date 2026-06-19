@@ -31,6 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--location-id", dest="location_id", help="id da localizacao no portal; pula typeahead quando informado")
     parser.add_argument("--geo-id", dest="location_id", help="alias LinkedIn para --location-id")
     parser.add_argument("--location-choice", type=int, help="indice 1-based da localizacao retornada pelo portal")
+    parser.add_argument(
+        "--work-type",
+        choices=["normal", "remote", "remoto", "hybrid", "hibrido", "híbrido"],
+        default="normal",
+        help="modalidade da vaga; LinkedIn usa remote/remoto como f_WT=2 e hybrid/hibrido como f_WT=3",
+    )
     parser.add_argument("--valid-count", type=int, default=25, help="quantidade de proxies/bridges funcionais para manter no pool")
     parser.add_argument("--jobs-per-proxy", type=int, default=5, help="quantidade de detalhes de vagas por proxy antes de rotacionar")
     parser.add_argument("--max-count", type=int, default=177, help="quantidade maxima de configs para carregar")
@@ -75,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
         location=args.location,
         location_id=args.location_id,
         location_choice=args.location_choice,
+        work_type=args.work_type,
         valid_count=args.valid_count,
         jobs_per_proxy=args.jobs_per_proxy,
         max_count=args.max_count,

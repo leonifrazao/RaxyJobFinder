@@ -33,6 +33,14 @@ LINKEDIN_HEADERS = {
     "Sec-GPC": "1",
 }
 
+LINKEDIN_WORK_TYPE_CODES = {
+    "remote": "2",
+    "remoto": "2",
+    "hybrid": "3",
+    "hibrido": "3",
+    "híbrido": "3",
+}
+
 
 class LinkedInJobBoardAdapter:
     name = "linkedin"
@@ -48,6 +56,9 @@ class LinkedInJobBoardAdapter:
         }
         if query.location_id:
             params["geoId"] = query.location_id
+        work_type_code = self._work_type_code(query.work_type)
+        if work_type_code:
+            params["f_WT"] = work_type_code
         return f"{LINKEDIN_SEARCH_BASE_URL}?{urlencode(params)}"
 
     def _build_see_more_url(self, query: SearchQuery, offset: int) -> str:
@@ -59,7 +70,16 @@ class LinkedInJobBoardAdapter:
         }
         if query.location_id:
             params["geoId"] = query.location_id
+        work_type_code = self._work_type_code(query.work_type)
+        if work_type_code:
+            params["f_WT"] = work_type_code
         return f"{LINKEDIN_SEE_MORE_API_URL}?{urlencode(params)}"
+
+    @staticmethod
+    def _work_type_code(work_type: str | None) -> str | None:
+        if not work_type:
+            return None
+        return LINKEDIN_WORK_TYPE_CODES.get(work_type.strip().casefold())
 
     def get_location_options(self, bridge_url: str, location_query: str, timeout: float) -> list[LocationOption]:
         headers = self._headers(accept="*/*")

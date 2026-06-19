@@ -13,6 +13,7 @@ class TuiState:
     location: str = "Brasil"
     location_id: str = ""
     location_choice: str = "1"
+    work_type: str = "normal"
     provider: str = ""
     valid_count: int = 25
     jobs_per_proxy: int = 5
@@ -45,6 +46,7 @@ class TuiState:
             location=cfg.location,
             location_id=cfg.location_id,
             location_choice=cfg.location_choice,
+            work_type=cfg.work_type,
             provider=cfg.provider if hasattr(cfg, "provider") and cfg.provider else load_settings().proxy.default_provider,
             valid_count=cfg.valid_count,
             jobs_per_proxy=cfg.jobs_per_proxy,

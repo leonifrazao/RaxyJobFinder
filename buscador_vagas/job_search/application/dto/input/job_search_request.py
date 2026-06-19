@@ -24,3 +24,4 @@ class JobSearchRequest:
     start: int = 0
     max_jobs: int = 0
     detail_threads: int = 5
+    work_type: str | None = None

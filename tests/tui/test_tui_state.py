@@ -15,6 +15,7 @@ class TestTuiState:
         assert state.location == "Brasil"
         assert state.location_id == ""
         assert state.location_choice == "1"
+        assert state.work_type == "normal"
         assert state.valid_count == 25
         assert state.jobs_per_proxy == 5
         assert state.max_count == 177
@@ -40,6 +41,7 @@ class TestTuiState:
         assert state.portal == cfg.portal
         assert state.keywords == cfg.keywords
         assert state.location == cfg.location
+        assert state.work_type == cfg.work_type
         assert state.valid_count == cfg.valid_count
         assert state.jobs_per_proxy == cfg.jobs_per_proxy
         assert state.max_count == cfg.max_count
@@ -75,6 +77,7 @@ class TestTuiState:
         assert "portal" in field_names
         assert "keywords" in field_names
         assert "location" in field_names
+        assert "work_type" in field_names
         assert "valid_count" in field_names
         assert "timeout" in field_names
         assert "redis_url" in field_names

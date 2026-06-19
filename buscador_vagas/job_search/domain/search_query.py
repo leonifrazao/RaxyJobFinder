@@ -11,10 +11,11 @@ class SearchQuery:
     keywords: str
     location: str
     location_id: str | None = None
+    work_type: str | None = None
 
     def __post_init__(self) -> None:
         if not clean_text(self.keywords):
             raise ValueError("keywords are required")
 
     def with_location(self, location: LocationOption) -> "SearchQuery":
-        return SearchQuery(self.keywords, location.name, location.id)
+        return SearchQuery(self.keywords, location.name, location.id, self.work_type)

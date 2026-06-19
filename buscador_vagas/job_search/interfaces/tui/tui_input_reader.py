@@ -13,6 +13,7 @@ class TuiInputReader:
             location=self._text(fields["location"]),
             location_id=self._text(fields["location_id"]),
             location_choice=self._text(fields["location_choice"]),
+            work_type=self._text(fields["work_type"]),
             provider=self._text(fields["provider"]),
             valid_count=self._int(fields["valid_count"]),
             jobs_per_proxy=self._int(fields["jobs_per_proxy"]),

@@ -109,6 +109,16 @@ class TestBuildParser:
         args = parser.parse_args(["--location-choice", "2"])
         assert args.location_choice == 2
 
+    def test_work_type(self):
+        parser = build_parser()
+        args = parser.parse_args(["--work-type", "remote"])
+        assert args.work_type == "remote"
+
+    def test_work_type_accepts_portuguese(self):
+        parser = build_parser()
+        args = parser.parse_args(["--work-type", "híbrido"])
+        assert args.work_type == "híbrido"
+
     def test_valid_count(self):
         parser = build_parser()
         args = parser.parse_args(["--valid-count", "10"])

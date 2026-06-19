@@ -91,6 +91,21 @@ class TestBuildSearchUrl:
         url = adapter.build_search_url(q)
         assert "geoId" not in url
 
+    def test_remote_work_type(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", location_id="103644278", work_type="remote")
+        url = adapter.build_search_url(q)
+        assert "f_WT=2" in url
+
+    def test_hybrid_work_type_accepts_portuguese(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", location_id="103644278", work_type="híbrido")
+        url = adapter.build_search_url(q)
+        assert "f_WT=3" in url
+
+    def test_normal_work_type_omits_filter(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", work_type="normal")
+        url = adapter.build_search_url(q)
+        assert "f_WT" not in url
+
 
 class TestJobIdFromUrn:
     def test_valid_urn(self):
@@ -144,6 +159,11 @@ class TestBuildSeeMoreUrl:
         url = adapter._build_see_more_url(sample_query, 60)
         assert "start=60" in url
         assert "keywords=engenheiro" in url
+
+    def test_includes_work_type(self, adapter: LinkedInJobBoardAdapter):
+        query = SearchQuery(keywords="python", location="Estados Unidos", work_type="hybrid")
+        url = adapter._build_see_more_url(query, 60)
+        assert "f_WT=3" in url
 
 
 class TestParseJobsFromHtml:

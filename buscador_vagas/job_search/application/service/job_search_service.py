@@ -62,7 +62,7 @@ class JobSearchService(JobSearchUseCase):
             location=request.location,
             proxy_sources_count=len(request.proxy_sources),
         )
-        query = SearchQuery(request.keywords, request.location, request.location_id)
+        query = SearchQuery(request.keywords, request.location, request.location_id, request.work_type)
         bridges = self._prepare_bridges(query, request)
         try:
             query = self._resolve_location(query, bridges, request)

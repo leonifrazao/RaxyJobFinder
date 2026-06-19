@@ -92,17 +92,18 @@ class TestTuiApp:
         assert fields["keywords"].value == "Java"
         assert fields["location"].value == "RJ"
         assert fields["valid_count"].value == "25"
+        assert fields["work_type"].value == "normal"
         assert fields["timeout"].value == "15.0"
         assert fields["redis_url"].value is not None
         assert fields["events_channel"].value is not None
-        assert len(fields) == 23
+        assert len(fields) == 24
 
     def test_build_fields_includes_all_keys(self):
         app = TuiApp()
         keys = app._build_fields(TuiState()).keys()
         expected = {
             "portal", "keywords", "location", "location_id", "location_choice",
-            "provider", "valid_count", "jobs_per_proxy", "max_count", "threads",
+            "work_type", "provider", "valid_count", "jobs_per_proxy", "max_count", "threads",
             "timeout", "detail_timeout", "max_jobs", "start", "details_limit",
             "detail_threads", "show_jobs", "gd_cookie", "filters_path",
             "jobs_output", "details_output", "redis_url", "events_channel",

@@ -25,6 +25,7 @@ class DefaultsConfig:
     filters_path: str = ""
     location_id: str = ""
     location_choice: str = "1"
+    work_type: str = "normal"
 
 
 @dataclass
@@ -216,7 +217,7 @@ def _default_dict() -> dict:
             "details_limit": 0, "start": 0, "max_jobs": 0,
             "detail_threads": 5, "show_jobs": 10, "silent": True,
             "gd_cookie": "", "filters_path": "", "location_id": "",
-            "location_choice": "1",
+            "location_choice": "1", "work_type": "normal",
         },
         "output": {
             "jobs_path": "output/{portal}/vagas.json",
