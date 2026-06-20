@@ -93,7 +93,7 @@ class TestTuiApp:
         assert fields["location"].value == "RJ"
         assert fields["valid_count"].value == "25"
         assert fields["work_type"].value == "normal"
-        assert fields["applicant_filter"].value == "normal"
+        assert fields["under_10_applicants"].value == "False"
         assert fields["timeout"].value == "15.0"
         assert fields["redis_url"].value is not None
         assert fields["events_channel"].value is not None
@@ -104,7 +104,7 @@ class TestTuiApp:
         keys = app._build_fields(TuiState()).keys()
         expected = {
             "portal", "keywords", "location", "location_id", "location_choice",
-            "work_type", "applicant_filter", "provider", "valid_count", "jobs_per_proxy", "max_count", "threads",
+            "work_type", "under_10_applicants", "provider", "valid_count", "jobs_per_proxy", "max_count", "threads",
             "timeout", "detail_timeout", "max_jobs", "start", "details_limit",
             "detail_threads", "show_jobs", "gd_cookie", "filters_path",
             "jobs_output", "details_output", "redis_url", "events_channel",

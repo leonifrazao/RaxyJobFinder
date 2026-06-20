@@ -75,7 +75,7 @@ class TuiApp:
             "location_id": ptg.InputField(state.location_id, prompt="Loc ID: "),
             "location_choice": ptg.InputField(state.location_choice, prompt="Loc choice: "),
             "work_type": ptg.InputField(state.work_type, prompt="Work type: "),
-            "applicant_filter": ptg.InputField(state.applicant_filter, prompt="Applicant filter: "),
+            "under_10_applicants": ptg.InputField(str(state.under_10_applicants), prompt="Under 10 applicants: "),
             "provider": ptg.InputField(default_provider, prompt="Provider: "),
             "valid_count": ptg.InputField(str(state.valid_count), prompt="Valid: "),
             "jobs_per_proxy": ptg.InputField(str(state.jobs_per_proxy), prompt="Jobs/proxy: "),
@@ -125,7 +125,7 @@ class TuiApp:
             _section("BUSCA"),
             f["portal"], f["keywords"], f["location"],
             f["location_id"], f["location_choice"],
-            f["work_type"], f["applicant_filter"],
+            f["work_type"], f["under_10_applicants"],
             "",
             _section("PROXY"),
             f["provider"], f["valid_count"],
@@ -350,7 +350,7 @@ class TuiInputReader:
             location_id=_text(fields["location_id"]),
             location_choice=_text(fields["location_choice"]),
             work_type=_text(fields["work_type"]),
-            applicant_filter=_text(fields["applicant_filter"]),
+            under_10_applicants=_bool(fields["under_10_applicants"]),
             provider=_text(fields["provider"]),
             valid_count=_int(fields["valid_count"]),
             jobs_per_proxy=_int(fields["jobs_per_proxy"]),
@@ -384,6 +384,17 @@ def _int(field: ptg.InputField) -> int:
 def _float(field: ptg.InputField) -> float:
     raw = _text(field)
     return float(raw) if raw else 0.0
+
+
+def _bool(field: ptg.InputField) -> bool:
+    raw = _text(field).casefold()
+    if not raw:
+        return False
+    if raw in {"1", "true", "sim", "s", "yes", "y"}:
+        return True
+    if raw in {"0", "false", "nao", "não", "n", "no"}:
+        return False
+    raise ValueError(f"booleano invalido: {raw}")
 
 
 def _build_ptg_config(tui_cfg) -> str:

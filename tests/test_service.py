@@ -261,8 +261,8 @@ class TestJobSearchService:
         with pytest.raises(ValueError, match="LinkedIn"):
             service.run(request)
 
-    def test_rejects_applicant_filter_outside_linkedin(self, service, sample_request):
-        request = replace(sample_request, applicant_filter="menos de 10 candidaturas")
+    def test_rejects_under_10_applicants_outside_linkedin(self, service, sample_request):
+        request = replace(sample_request, under_10_applicants=True)
 
         with pytest.raises(ValueError, match="LinkedIn"):
             service.run(request)

@@ -119,15 +119,15 @@ class TestBuildParser:
         args = parser.parse_args(["--work-type", "híbrido"])
         assert args.work_type == "híbrido"
 
-    def test_default_applicant_filter(self):
+    def test_default_under_10_applicants(self):
         parser = build_parser()
         args = parser.parse_args([])
-        assert args.applicant_filter == "normal"
+        assert args.under_10_applicants is False
 
-    def test_applicant_filter_under_10(self):
+    def test_under_10_applicants_flag(self):
         parser = build_parser()
-        args = parser.parse_args(["--applicant-filter", "menos de 10 candidaturas"])
-        assert args.applicant_filter == "menos de 10 candidaturas"
+        args = parser.parse_args(["--under-10-applicants"])
+        assert args.under_10_applicants is True
 
     def test_valid_count(self):
         parser = build_parser()

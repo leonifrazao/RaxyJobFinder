@@ -25,4 +25,4 @@ class JobSearchRequest:
     max_jobs: int = 0
     detail_threads: int = 5
     work_type: str | None = None
-    applicant_filter: str | None = "normal"
+    under_10_applicants: bool = False

@@ -110,13 +110,13 @@ class TestBuildSearchUrl:
         assert "f_WT" not in url
 
     def test_under_10_applicants_filter(self, adapter: LinkedInJobBoardAdapter):
-        q = SearchQuery(keywords="python", location="Estados Unidos", applicant_filter="menos de 10 candidaturas")
+        q = SearchQuery(keywords="python", location="Estados Unidos", under_10_applicants=True)
         url = adapter.build_search_url(q)
         assert "f_EA=true" in url
         assert "trk=public_jobs_filters_f_EA" in url
 
     def test_normal_applicants_filter_omits_filter(self, adapter: LinkedInJobBoardAdapter):
-        q = SearchQuery(keywords="python", location="Estados Unidos", applicant_filter="normal")
+        q = SearchQuery(keywords="python", location="Estados Unidos", under_10_applicants=False)
         url = adapter.build_search_url(q)
         assert "f_EA" not in url
 
@@ -179,8 +179,8 @@ class TestBuildSeeMoreUrl:
         url = adapter._build_see_more_url(query, 60)
         assert "f_WT=3" in url
 
-    def test_includes_applicant_filter(self, adapter: LinkedInJobBoardAdapter):
-        query = SearchQuery(keywords="python", location="Estados Unidos", applicant_filter="menos de 10 candidaturas")
+    def test_includes_under_10_applicants_filter(self, adapter: LinkedInJobBoardAdapter):
+        query = SearchQuery(keywords="python", location="Estados Unidos", under_10_applicants=True)
         url = adapter._build_see_more_url(query, 60)
         assert "f_EA=true" in url
 

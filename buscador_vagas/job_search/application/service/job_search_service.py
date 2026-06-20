@@ -24,7 +24,7 @@ from job_search.domain.detailing import JobDetailingSession
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.proxy import BridgeEndpoint
-from job_search.domain.search_query import APPLICANT_FILTER_NORMAL, SearchQuery
+from job_search.domain.search_query import SearchQuery
 
 
 class JobSearchService(JobSearchUseCase):
@@ -70,7 +70,7 @@ class JobSearchService(JobSearchUseCase):
             request.location,
             request.location_id,
             request.work_type,
-            request.applicant_filter,
+            request.under_10_applicants,
         )
         bridges = self._prepare_bridges(query, request)
         try:
@@ -101,7 +101,7 @@ class JobSearchService(JobSearchUseCase):
             return
         if request.work_type and request.work_type.strip().casefold() not in {"normal", "presencial"}:
             raise ValueError("A modalidade (--work-type) so pode ser escolhida no LinkedIn.")
-        if request.applicant_filter and request.applicant_filter != APPLICANT_FILTER_NORMAL:
+        if request.under_10_applicants:
             raise ValueError("O filtro de candidaturas so pode ser usado no LinkedIn.")
 
     def _finish_without_working_bridge(self, log: Any) -> int:

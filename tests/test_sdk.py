@@ -236,13 +236,13 @@ class TestJobFinder:
         request = mock_service.run.call_args[0][0]
         assert request.work_type == "remote"
 
-    def test_applicant_filter_passed_through(self, mock_deps):
+    def test_under_10_applicants_passed_through(self, mock_deps):
         _, mock_service = mock_deps
-        finder = JobFinder(applicant_filter="menos de 10 candidaturas")
+        finder = JobFinder(under_10_applicants=True)
         finder.search()
 
         request = mock_service.run.call_args[0][0]
-        assert request.applicant_filter == "menos de 10 candidaturas"
+        assert request.under_10_applicants is True
 
     def test_filters_path_string_in_init(self, mock_deps):
         _, mock_service = mock_deps

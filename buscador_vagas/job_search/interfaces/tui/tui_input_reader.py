@@ -14,7 +14,7 @@ class TuiInputReader:
             location_id=self._text(fields["location_id"]),
             location_choice=self._text(fields["location_choice"]),
             work_type=self._text(fields["work_type"]),
-            applicant_filter=self._text(fields["applicant_filter"]),
+            under_10_applicants=self._bool(fields["under_10_applicants"]),
             provider=self._text(fields["provider"]),
             valid_count=self._int(fields["valid_count"]),
             jobs_per_proxy=self._int(fields["jobs_per_proxy"]),
@@ -48,3 +48,14 @@ class TuiInputReader:
     def _float(cls, field: Any) -> float:
         raw = cls._text(field)
         return float(raw) if raw else 0.0
+
+    @classmethod
+    def _bool(cls, field: Any) -> bool:
+        raw = cls._text(field).casefold()
+        if not raw:
+            return False
+        if raw in {"1", "true", "sim", "s", "yes", "y"}:
+            return True
+        if raw in {"0", "false", "nao", "não", "n", "no"}:
+            return False
+        raise ValueError(f"booleano invalido: {raw}")

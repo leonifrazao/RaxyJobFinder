@@ -13,7 +13,7 @@ from job_search.application.ports.http_client import HttpClient
 from job_search.domain.job_details import JobDetails, extract_requisitos
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
-from job_search.domain.search_query import APPLICANT_FILTER_UNDER_10, SearchQuery
+from job_search.domain.search_query import SearchQuery
 
 _REMOTE_PATTERN = re.compile(
     r"(?:home\s*office|trabalhe?\s*(?:de\s*)?casa|work\s*(?:from\s*)?home|"
@@ -83,7 +83,7 @@ class LinkedInJobBoardAdapter:
         work_type_code = self._work_type_code(query.work_type)
         if work_type_code:
             params["f_WT"] = work_type_code
-        self._apply_applicant_filter(params, query.applicant_filter)
+        self._apply_under_10_applicants_filter(params, query.under_10_applicants)
         return f"{LINKEDIN_SEARCH_BASE_URL}?{urlencode(params)}"
 
     def _build_see_more_url(self, query: SearchQuery, offset: int) -> str:
@@ -98,12 +98,12 @@ class LinkedInJobBoardAdapter:
         work_type_code = self._work_type_code(query.work_type)
         if work_type_code:
             params["f_WT"] = work_type_code
-        self._apply_applicant_filter(params, query.applicant_filter)
+        self._apply_under_10_applicants_filter(params, query.under_10_applicants)
         return f"{LINKEDIN_SEE_MORE_API_URL}?{urlencode(params)}"
 
     @staticmethod
-    def _apply_applicant_filter(params: dict[str, str], applicant_filter: str | None) -> None:
-        if applicant_filter == APPLICANT_FILTER_UNDER_10:
+    def _apply_under_10_applicants_filter(params: dict[str, str], under_10_applicants: bool) -> None:
+        if under_10_applicants:
             params["trk"] = "public_jobs_filters_f_EA"
             params["f_EA"] = "true"
 

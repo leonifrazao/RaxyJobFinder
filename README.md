@@ -162,7 +162,7 @@ Use `job.to_dict()` para serializar em dicionário (útil para JSON).
 | `location_id` | `None` | ID da localização (pula typeahead) |
 | `location_choice` | `None` | Índice 1-based no typeahead |
 | `work_type` | `"normal"` | Modelo de trabalho, exclusivo do LinkedIn: `normal`, `remote`/`remoto` ou `hybrid`/`hibrido`/`híbrido` |
-| `applicant_filter` | `"normal"` | Filtro de candidaturas do LinkedIn: `normal` ou `menos de 10 candidaturas` |
+| `under_10_applicants` | `False` | `True` para filtrar vagas do LinkedIn com menos de 10 candidaturas |
 | `proxy_sources` | `None` | Lista de URLs/arquivos de proxy |
 | `proxy_provider` | `"united-states"` | `brazil`, `united-states`, `canada`, etc. |
 | `valid_count` | `25` | Bridges no pool |
@@ -251,14 +251,14 @@ Em todos os portais, os resultados salvos recebem o campo canônico `modalidade`
 
 ### Candidaturas no LinkedIn
 
-Use `--applicant-filter` para alternar entre a busca normal e o filtro de vagas com menos de 10 candidaturas no LinkedIn. Só existem dois valores aceitos:
+Use `--under-10-applicants` para filtrar vagas com menos de 10 candidaturas no LinkedIn. Sem essa flag, a busca normal é usada.
 
 ```bash
-python buscador_vagas/buscador.py --portal linkedin --applicant-filter normal
-python buscador_vagas/buscador.py --portal linkedin --applicant-filter "menos de 10 candidaturas"
+python buscador_vagas/buscador.py --portal linkedin
+python buscador_vagas/buscador.py --portal linkedin --under-10-applicants
 ```
 
-O modo `normal` não adiciona filtro extra. O modo `menos de 10 candidaturas` envia `f_EA=true` na URL do LinkedIn. Se esse filtro for usado na Gupy ou no Glassdoor, a busca é recusada.
+Quando `--under-10-applicants` é usado, o Raxy envia `f_EA=true` na URL do LinkedIn. Se esse filtro for usado na Gupy ou no Glassdoor, a busca é recusada.
 
 ### Requisitos extraídos
 
@@ -501,13 +501,12 @@ Modelo de trabalho desejado, exclusivo do LinkedIn. Padrão: `normal`.
 --work-type hybrid     # híbrido; aceita também hibrido/híbrido
 ```
 
-### `--applicant-filter`
+### `--under-10-applicants`
 
-Filtro de candidaturas, exclusivo do LinkedIn. Padrão: `normal`.
+Filtro booleano de candidaturas, exclusivo do LinkedIn. Por padrão fica desligado.
 
 ```
---applicant-filter normal
---applicant-filter "menos de 10 candidaturas"  # adiciona f_EA=true
+--under-10-applicants  # adiciona f_EA=true
 ```
 
 ### `--proxy-source`

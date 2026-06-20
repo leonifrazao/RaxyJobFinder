@@ -97,7 +97,7 @@ class TestSearchQuery:
         assert q.location_id is None
 
     def test_with_location_returns_new_query(self):
-        q = SearchQuery("Python", "Brasil", work_type="remote", applicant_filter="menos de 10 candidaturas")
+        q = SearchQuery("Python", "Brasil", work_type="remote", under_10_applicants=True)
         loc = LocationOption("106057199", "Brasil")
         q2 = q.with_location(loc)
         assert q2 is not q
@@ -105,11 +105,7 @@ class TestSearchQuery:
         assert q2.location_id == "106057199"
         assert q2.keywords == "Python"
         assert q2.work_type == "remote"
-        assert q2.applicant_filter == "menos de 10 candidaturas"
-
-    def test_invalid_applicant_filter_raises(self):
-        with pytest.raises(ValueError, match="applicant_filter"):
-            SearchQuery("Python", "Brasil", applicant_filter="qualquer")
+        assert q2.under_10_applicants is True
 
 
 class TestJobSummary:
