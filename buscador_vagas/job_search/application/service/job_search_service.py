@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import replace
 from typing import Any
 
@@ -85,7 +86,8 @@ class JobSearchService(JobSearchUseCase):
             self._publish_event(SearchEventName.DETAIL_STARTED, f"Iniciando detalhamento de {len(result.jobs)} vagas...", total=len(result.jobs))
             detailed_jobs = self._enrich_jobs(result.jobs, bridges, result.search_url, request)
             detailed_jobs = self._with_modalidade(detailed_jobs, request.work_type)
-            filtered_jobs = self._filter_jobs(detailed_jobs, request.filters_path)
+            keyword_jobs = self._filter_jobs_by_keywords(detailed_jobs, request.keywords)
+            filtered_jobs = self._filter_jobs(keyword_jobs, request.filters_path)
 
             self._save_results(request, filtered_jobs)
             self.view.show_job_details(filtered_jobs, request.show_jobs)
@@ -271,6 +273,30 @@ class JobSearchService(JobSearchUseCase):
         detail_timeout: float,
     ) -> JobPosting:
         return self.job_detailing.detail_one_job(session, job, job_offset, search_url, detail_timeout)
+
+    def _filter_jobs_by_keywords(self, jobs: list[JobPosting], keywords: str) -> list[JobPosting]:
+        term = self._normalize_search_text(keywords)
+        if not term or term == "vagas":
+            return jobs
+        filtered_jobs = [job for job in jobs if term in self._keyword_search_text(job)]
+        self.view.info(f"[bold]Keyword:[/] {len(filtered_jobs)}/{len(jobs)} vagas contem '{keywords}' no titulo ou descricao")
+        if not filtered_jobs:
+            self.view.warn("Nenhuma vaga contem a keyword no titulo ou na descricao.")
+        return filtered_jobs
+
+    @classmethod
+    def _keyword_search_text(cls, job: JobPosting) -> str:
+        parts = [job.summary.title]
+        if job.details:
+            parts.extend([job.details.title, job.details.description])
+        return cls._normalize_search_text(" ".join(parts))
+
+    @staticmethod
+    def _normalize_search_text(value: object) -> str:
+        text = "" if value is None else str(value)
+        normalized = unicodedata.normalize("NFKD", text)
+        without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+        return " ".join(without_accents.casefold().split())
 
     def _filter_jobs(self, jobs: list[JobPosting], filters_path: str | None) -> list[JobPosting]:
         filters = self.filter_repository.load(filters_path)

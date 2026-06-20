@@ -179,7 +179,7 @@ class TestJobSearchService:
             jobs=[job],
         )
         mock_adapter.fetch_job_details.return_value = (
-            JobDetails(title="Data Analyst"),
+            JobDetails(title="Data Analyst", description="Trabalha com Python diariamente."),
             HttpResponse(200, "http://detail", {}, "<html/>"),
         )
 
@@ -292,6 +292,46 @@ class TestJobSearchService:
         mock_adapter.search_jobs.side_effect = Exception("fail")
         result = service._search_with_first_working_bridge(query, bridges, 10.0)
         assert result is None
+
+    def test_filter_jobs_by_keywords_keeps_title_match(self, service):
+        jobs = [
+            JobPosting(summary=JobSummary("linkedin", "e1", "Python Developer")),
+            JobPosting(summary=JobSummary("linkedin", "e2", "Java Developer")),
+        ]
+
+        result = service._filter_jobs_by_keywords(jobs, "python")
+
+        assert [job.summary.external_id for job in result] == ["e1"]
+
+    def test_filter_jobs_by_keywords_keeps_description_match(self, service):
+        jobs = [
+            JobPosting(
+                summary=JobSummary("gupy", "e1", "Backend Developer"),
+                details=JobDetails(description="Desenvolvimento de APIs com Python."),
+            ),
+            JobPosting(
+                summary=JobSummary("gupy", "e2", "Backend Developer"),
+                details=JobDetails(description="Desenvolvimento de APIs com Java."),
+            ),
+        ]
+
+        result = service._filter_jobs_by_keywords(jobs, "python")
+
+        assert [job.summary.external_id for job in result] == ["e1"]
+
+    def test_filter_jobs_by_keywords_is_accent_insensitive(self, service):
+        jobs = [JobPosting(summary=JobSummary("linkedin", "e1", "Analista de Automação"))]
+
+        result = service._filter_jobs_by_keywords(jobs, "automacao")
+
+        assert result == jobs
+
+    def test_filter_jobs_by_keywords_ignores_default_placeholder(self, service):
+        jobs = [JobPosting(summary=JobSummary("linkedin", "e1", "Backend Developer"))]
+
+        result = service._filter_jobs_by_keywords(jobs, "Vagas")
+
+        assert result == jobs
 
     def test_filter_jobs_no_filters(self, service, mock_filter_repository, sample_jobs):
         mock_filter_repository.load.return_value = MagicMock(enabled=False)

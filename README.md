@@ -234,6 +234,8 @@ Regras de filtragem em JSON. O motor suporta operadores lógicos (`all`, `any`, 
 python buscador_vagas/buscador.py --filters filtros/python.json
 ```
 
+Além dos filtros JSON opcionais, a keyword da busca também é aplicada no resultado final: para `--keywords "Python"`, a vaga só é salva se `Python` aparecer no título ou na descrição detalhada. O valor padrão `Vagas` é tratado como placeholder e não aplica esse corte.
+
 ### Modelo de trabalho
 
 Use `--work-type` para pedir vagas remotas ou híbridas somente no LinkedIn. O filtro é enviado para a busca pública com `f_WT=2` para remoto e `f_WT=3` para híbrido. Se `--work-type` diferente de `normal` for usado na Gupy ou no Glassdoor, a busca é recusada.
@@ -462,7 +464,7 @@ Portal de vagas a consultar. Padrão: `linkedin`.
 
 ### `--keywords`
 
-Termo de busca. Use aspas para múltiplas palavras.
+Termo de busca. Use aspas para múltiplas palavras. Depois do detalhamento, o Raxy mantém apenas vagas em que esse termo aparece no título ou na descrição; `Vagas`, o padrão, não aplica esse filtro final.
 
 ```
 --keywords "Python"
