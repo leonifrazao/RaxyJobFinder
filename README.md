@@ -179,6 +179,8 @@ Use `job.to_dict()` para serializar em dicionário (útil para JSON).
 | `detail_threads` | `5` | Threads paralelas para detalhes |
 | `gd_cookie` | `""` | Cookie do Glassdoor |
 | `silent` | `True` | `False` para mostrar output no terminal |
+| `view` | `None` | Objeto view customizado (substitui `SilentView` quando fornecido) |
+| `filter_by_keywords` | `False` | `True` para filtrar vagas sem a keyword no titulo antes do detalhamento |
 
 ---
 
