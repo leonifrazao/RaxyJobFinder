@@ -22,15 +22,21 @@ class RichJobSearchView:
     def error(self, message: str) -> None:
         self.console.print(f"[red]{message}[/]")
 
-    def choose_location(self, options: list[LocationOption], selected_index: int | None) -> LocationOption:
+    def choose_location(self, options: list[LocationOption], selected_index: int | str | None) -> LocationOption:
         if not options:
             raise RuntimeError("Nenhuma localizacao retornada pelo portal.")
         self._show_location_options(options)
-        if selected_index is None:
-            selected_index = IntPrompt.ask("Escolha a localizacao", default=1)
-        if selected_index < 1 or selected_index > len(options):
+        index: int | None = None
+        if selected_index is not None:
+            try:
+                index = int(selected_index)
+            except (TypeError, ValueError):
+                pass
+        if index is None:
+            index = IntPrompt.ask("Escolha a localizacao", default=1)
+        if index < 1 or index > len(options):
             raise ValueError(f"location-choice deve estar entre 1 e {len(options)}")
-        selected = options[selected_index - 1]
+        selected = options[index - 1]
         self.console.print(f"[bold green]Localizacao selecionada:[/] {selected.name} [dim](id={selected.id})[/]")
         return selected
 

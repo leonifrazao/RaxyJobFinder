@@ -301,6 +301,22 @@ class TestJobFinder:
         request = mock_service.run.call_args[0][0]
         assert request.filters_path == "filters/search.json"
 
+    def test_filter_by_keywords_default_off(self, mock_deps):
+        _, mock_service = mock_deps
+        finder = JobFinder()
+        finder.search()
+
+        request = mock_service.run.call_args[0][0]
+        assert request.filter_by_keywords is False
+
+    def test_filter_by_keywords_on(self, mock_deps):
+        _, mock_service = mock_deps
+        finder = JobFinder(filter_by_keywords=True)
+        finder.search()
+
+        request = mock_service.run.call_args[0][0]
+        assert request.filter_by_keywords is True
+
     def test_no_filters_by_default(self, mock_deps):
         _, mock_service = mock_deps
         finder = JobFinder()

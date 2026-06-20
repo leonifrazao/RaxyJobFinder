@@ -152,11 +152,10 @@ class LinkedInJobBoardAdapter:
             if len(all_jobs) >= max_jobs:
                 all_jobs = all_jobs[:max_jobs]
             else:
-                step = 60
-                offset = max(start, len(all_jobs))
                 api_headers = self._api_headers(search_url)
                 while len(all_jobs) < max_jobs:
                     try:
+                        offset = len(all_jobs)
                         page_resp = self.http_client.get(bridge_url, self._build_see_more_url(query, offset), timeout, headers=api_headers)
                         if page_resp.status_code != 200 or not page_resp.text.strip():
                             break
@@ -168,7 +167,6 @@ class LinkedInJobBoardAdapter:
                         if not new_jobs:
                             break
                         all_jobs.extend(new_jobs)
-                        offset += step
                     except Exception:
                         break
             all_jobs = all_jobs[:max_jobs]

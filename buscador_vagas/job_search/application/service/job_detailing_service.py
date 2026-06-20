@@ -61,11 +61,14 @@ class JobDetailingService(JobDetailing):
         job_offset: int,
         search_url: str,
         detail_timeout: float,
+        max_bridge_attempts: int = 3,
     ) -> JobPosting:
         if not job.external_id:
             return session.missing_external_id(job)
         last_error = "nenhuma bridge disponivel"
-        for bridge in session.bridge_candidates_for(job_offset):
+        for attempt, bridge in enumerate(session.bridge_candidates_for(job_offset)):
+            if attempt >= max_bridge_attempts:
+                break
             try:
                 details, response = self.adapter.fetch_job_details(bridge.url, job, search_url, detail_timeout)
                 return session.successful_detail(
@@ -93,7 +96,8 @@ class JobDetailingService(JobDetailing):
                     job_id=job.external_id,
                     error=last_error,
                 )
-                self.view.warn(f"Bridge {bridge.index} falhou no detalhe {job.external_id}; tentando proxima: {exc}")
+                if attempt < max_bridge_attempts - 1:
+                    self.view.warn(f"Bridge {bridge.index} falhou no detalhe {job.external_id}; tentando proxima: {exc}")
         self.view.error(f"Falha ao detalhar {job.external_id}: {last_error}")
         logger.bind(
             component="job_search_service",

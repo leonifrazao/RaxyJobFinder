@@ -43,6 +43,8 @@ class JobFinder:
         detail_threads: int | None = None,
         gd_cookie: str | None = None,
         silent: bool | None = None,
+        view: object | None = None,
+        filter_by_keywords: bool | None = None,
     ):
         from dependency_injector import providers
         from loguru import logger
@@ -71,6 +73,7 @@ class JobFinder:
         detail_threads = detail_threads if detail_threads is not None else cfg.detail_threads
         gd_cookie = gd_cookie if gd_cookie is not None else cfg.gd_cookie
         silent = silent if silent is not None else cfg.silent
+        filter_by_keywords = filter_by_keywords if filter_by_keywords is not None else False
 
         configure_logging()
         if portal not in self.PORTALS:
@@ -116,6 +119,7 @@ class JobFinder:
 
         redis_cfg = load_settings().redis
 
+        self._filter_by_keywords = filter_by_keywords
         self._container = JobSearchContainer()
         self._container.config.portal_name.from_value(portal)
         self._container.config.provider_name.from_value(proxy_provider)
@@ -130,7 +134,7 @@ class JobFinder:
             proxy_sources_count=len(proxy_sources),
         ).info("sdk_job_finder_created")
 
-        self._view = SilentView()
+        self._view = view or SilentView()
         self._repository = InMemoryRepository()
         self._filter_repo = _CustomFilterRepository(self._filter_set)
         self._container.view.override(providers.Object(self._view))
@@ -194,6 +198,7 @@ class JobFinder:
             start=self._start,
             max_jobs=self._max_jobs,
             detail_threads=self._detail_threads,
+            filter_by_keywords=self._filter_by_keywords,
         )
 
         logger.bind(component="sdk", portal=self._portal, keywords=self._keywords).info("sdk_search_started")

@@ -88,7 +88,6 @@ class GupyJobBoardAdapter:
         all_jobs: list[JobSummary] = []
         limit = 100
         offset = start
-        total = 0
         first_response = None
 
         while True:
@@ -112,18 +111,12 @@ class GupyJobBoardAdapter:
             jobs = self._parse_jobs(data.get("data", []))
             all_jobs.extend(jobs)
 
-            pagination = data.get("pagination", {})
-            if not total:
-                total = pagination.get("total", 0)
-
             offset += limit
 
             if max_jobs > 0 and len(all_jobs) >= max_jobs:
                 all_jobs = all_jobs[:max_jobs]
                 break
-            if total and offset >= total:
-                break
-            if not jobs:
+            if len(jobs) < limit:
                 break
 
         first_response = first_response or response

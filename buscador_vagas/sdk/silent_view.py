@@ -15,10 +15,13 @@ class SilentView:
     def error(self, message: str) -> None:
         pass
 
-    def choose_location(self, options: list[LocationOption], selected_index: int | None) -> LocationOption:
+    def choose_location(self, options: list[LocationOption], selected_index: int | str | None) -> LocationOption:
         if not options:
             raise RuntimeError("Nenhuma localizacao retornada pelo portal.")
-        index = (selected_index or 1) - 1
+        try:
+            index = int(selected_index or 1) - 1
+        except (TypeError, ValueError):
+            index = 0
         return options[max(0, min(index, len(options) - 1))]
 
     def show_jobs(self, jobs: list[JobSummary], limit: int) -> None:

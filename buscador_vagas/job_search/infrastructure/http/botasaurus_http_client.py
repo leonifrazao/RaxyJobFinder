@@ -31,10 +31,12 @@ class BotasaurusHttpClient:
 
     def get(self, bridge_url: str, url: str, timeout: float, *, headers: dict[str, Any] | None = None, max_retry: int = 1) -> HttpResponse:
         self._check_bridge_reachable(bridge_url)
+        cfg = load_settings().defaults
         @botasaurus_request(
             proxy=bridge_url,
             output=None,
             max_retry=max_retry,
+            close_on_crash=cfg.close_on_crash,
         )
         def request_task(request: Request, data):
             response = request.get(
@@ -54,10 +56,26 @@ class BotasaurusHttpClient:
         try:
             result = request_task({"url": url, "timeout": timeout, "headers": headers or {}})
         except ClientException as exc:
+            if load_settings().defaults.suppress_client_errors:
+                return HttpResponse(
+                    status_code=None,
+                    url=url,
+                    headers={},
+                    text="",
+                    cookies={},
+                )
             raise RuntimeError(
                 f"Proxy {bridge_url} falhou no GET {url}: {exc}"
             ) from exc
         if result is None:
+            if load_settings().defaults.suppress_client_errors:
+                return HttpResponse(
+                    status_code=None,
+                    url=url,
+                    headers={},
+                    text="",
+                    cookies={},
+                )
             raise RuntimeError("request retornou sem resposta")
         return HttpResponse(
             status_code=result.get("status_code"),
@@ -69,10 +87,12 @@ class BotasaurusHttpClient:
 
     def post(self, bridge_url: str, url: str, timeout: float, *, json_body: dict[str, Any] | None = None, headers: dict[str, Any] | None = None, max_retry: int = 1) -> HttpResponse:
         self._check_bridge_reachable(bridge_url)
+        cfg = load_settings().defaults
         @botasaurus_request(
             proxy=bridge_url,
             output=None,
             max_retry=max_retry,
+            close_on_crash=cfg.close_on_crash,
         )
         def request_task(request: Request, data):
             req_headers = dict(data["headers"])
@@ -101,10 +121,26 @@ class BotasaurusHttpClient:
         try:
             result = request_task({"url": url, "timeout": timeout, "headers": headers or {}, "json_body": json_body})
         except ClientException as exc:
+            if load_settings().defaults.suppress_client_errors:
+                return HttpResponse(
+                    status_code=None,
+                    url=url,
+                    headers={},
+                    text="",
+                    cookies={},
+                )
             raise RuntimeError(
                 f"Proxy {bridge_url} falhou no POST {url}: {exc}"
             ) from exc
         if result is None:
+            if load_settings().defaults.suppress_client_errors:
+                return HttpResponse(
+                    status_code=None,
+                    url=url,
+                    headers={},
+                    text="",
+                    cookies={},
+                )
             raise RuntimeError("request retornou sem resposta")
         return HttpResponse(
             status_code=result.get("status_code"),

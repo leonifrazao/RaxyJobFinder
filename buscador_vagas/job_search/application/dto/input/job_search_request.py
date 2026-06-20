@@ -26,3 +26,4 @@ class JobSearchRequest:
     detail_threads: int = 5
     work_type: str | None = None
     under_10_applicants: bool = False
+    filter_by_keywords: bool = False

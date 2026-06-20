@@ -267,20 +267,20 @@ class TestSearchJobs:
         page1 = MagicMock()
         page1.status_code = 200
         page1.text = json.dumps({
-            "data": [SAMPLE_JOB_API],
+            "data": [SAMPLE_JOB_API for _ in range(100)],
             "pagination": {"total": 150, "limit": 100, "offset": 0},
         })
         page2 = MagicMock()
         page2.status_code = 200
         page2.text = json.dumps({
-            "data": [SAMPLE_JOB_API],
+            "data": [SAMPLE_JOB_API for _ in range(50)],
             "pagination": {"total": 150, "limit": 100, "offset": 100},
         })
         adapter.http_client.get.side_effect = [page1, page2]
 
         q = SearchQuery(keywords="engenheiro", location="SP")
         result = adapter.search_jobs("http://bridge:8080", q, 10.0)
-        assert len(result.jobs) == 2
+        assert len(result.jobs) == 150
 
     def test_empty_response(self, adapter: GupyJobBoardAdapter):
         mock_resp = MagicMock()

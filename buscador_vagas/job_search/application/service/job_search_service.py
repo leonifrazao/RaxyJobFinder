@@ -86,7 +86,10 @@ class JobSearchService(JobSearchUseCase):
             self._publish_event(SearchEventName.DETAIL_STARTED, f"Iniciando detalhamento de {len(result.jobs)} vagas...", total=len(result.jobs))
             detailed_jobs = self._enrich_jobs(result.jobs, bridges, result.search_url, request)
             detailed_jobs = self._with_modalidade(detailed_jobs, request.work_type)
-            keyword_jobs = self._filter_jobs_by_keywords(detailed_jobs, request.keywords)
+            if request.filter_by_keywords:
+                keyword_jobs = self._filter_jobs_by_keywords(detailed_jobs, request.keywords)
+            else:
+                keyword_jobs = detailed_jobs
             filtered_jobs = self._filter_jobs(keyword_jobs, request.filters_path)
 
             self._save_results(request, filtered_jobs)

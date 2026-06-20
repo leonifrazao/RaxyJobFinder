@@ -96,10 +96,10 @@ class TestTuiAppPromptState:
         assert state.work_type == "normal"
         assert state.under_10_applicants is False
         assert len(prompter.select_calls) == 1
-        assert prompter.confirm_calls == []
+        assert prompter.confirm_calls == [("Filtro por keyword", "Filtrar vagas que contenham a keyword no titulo ou descricao?", False)]
 
     def test_prompt_state_asks_glassdoor_cookie_only_for_glassdoor(self):
-        texts = ["Python", "Brasil", "", "1", "cookie=value", ""]
+        texts = ["Python", "Brasil", "180", "cookie=value", ""]
         prompter = FakePrompter(selects=["glassdoor"], texts=texts)
         app = TuiApp(prompter=prompter)
 

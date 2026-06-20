@@ -5,9 +5,13 @@ from job_search.interfaces.tui.tui_state import TuiState
 
 
 class TuiSearchRunner:
+    def __init__(self, view: object | None = None) -> None:
+        self._view = view
+
     def run(self, state: TuiState) -> int:
         location_id = state.location_id.strip() or None
-        location_choice = int(state.location_choice.strip()) if state.location_choice.strip() else None
+        raw_choice = state.location_choice.strip()
+        location_choice = int(raw_choice) if raw_choice else -1
 
         finder = JobFinder(
             portal=state.portal,
@@ -30,7 +34,9 @@ class TuiSearchRunner:
             detail_threads=state.detail_threads,
             gd_cookie=state.gd_cookie,
             filters_path=state.filters_path.strip() or None,
+            filter_by_keywords=state.filter_by_keywords,
             silent=True,
+            view=self._view,
         )
         finder.search(
             jobs_output=state.jobs_output,

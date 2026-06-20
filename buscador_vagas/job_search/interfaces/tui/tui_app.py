@@ -4,7 +4,6 @@ import os
 import threading
 from pathlib import Path
 from collections.abc import Callable, Sequence
-from typing import Protocol
 
 from loguru import logger
 from prompt_toolkit import print_formatted_text
@@ -14,22 +13,13 @@ from job_search.application.ports import SearchEventSubscriber
 from job_search.infrastructure.config import find_config_path, load_settings
 from job_search.infrastructure.messaging.redis_search_event_subscriber import RedisSearchEventSubscriber
 from job_search.interfaces.tui.tui_event_formatter import TuiEventFormatter
+from job_search.interfaces.tui.tui_prompter import Choice, TuiPrompter
 from job_search.interfaces.tui.tui_search_runner import TuiSearchRunner
 from job_search.interfaces.tui.tui_state import TuiState
+from job_search.interfaces.tui.tui_view import TuiJobSearchView
 
 
-Choice = tuple[str, str]
 SubscriberFactory = Callable[[str, str], SearchEventSubscriber]
-
-
-class TuiPrompter(Protocol):
-    def select(self, title: str, text: str, values: Sequence[Choice], default: str) -> str | None: ...
-
-    def text(self, title: str, text: str, default: str = "") -> str | None: ...
-
-    def confirm(self, title: str, text: str, default: bool = False) -> bool | None: ...
-
-    def message(self, title: str, text: str) -> None: ...
 
 
 class PromptToolkitPrompter:
@@ -57,9 +47,10 @@ class TuiApp:
         event_printer: Callable[[str], None] | None = None,
         config_path: str | Path = "config.yaml",
     ) -> None:
-        self._runner = runner or TuiSearchRunner()
-        self._subscriber_factory = subscriber_factory or self._build_subscriber
         self._prompter = prompter or PromptToolkitPrompter()
+        view = TuiJobSearchView(self._prompter)
+        self._runner = runner or TuiSearchRunner(view=view)
+        self._subscriber_factory = subscriber_factory or self._build_subscriber
         self._formatter = TuiEventFormatter()
         self._event_printer = event_printer or print_formatted_text
         self._event_stop_event: threading.Event | None = None
@@ -138,6 +129,14 @@ class TuiApp:
                 return None
             under_10_applicants = under_10
 
+        filter_by_keywords = self._prompter.confirm(
+            "Filtro por keyword",
+            "Filtrar vagas que contenham a keyword no titulo ou descricao?",
+            defaults.filter_by_keywords,
+        )
+        if filter_by_keywords is None:
+            return None
+
         output_cfg = settings.output
         jobs_output = output_cfg.jobs_path.format(portal=portal)
         details_output = output_cfg.details_path.format(portal=portal)
@@ -147,8 +146,9 @@ class TuiApp:
                 portal=portal,
                 keywords=self._prompt_text("Keywords", "Termo de busca", defaults.keywords),
                 location=self._prompt_text("Localizacao", "Texto de localizacao", defaults.location),
-                location_id=self._prompt_text("Location ID", "ID da localizacao (opcional)", defaults.location_id),
-                location_choice=self._prompt_text("Location choice", "Indice 1-based da localizacao", defaults.location_choice),
+                location_id="",
+                location_choice="",
+                max_jobs=self._prompt_int("Vagas", "Quantas vagas voce quer?", defaults.max_jobs),
                 work_type=work_type,
                 under_10_applicants=under_10_applicants,
                 provider=defaults.provider,
@@ -158,13 +158,12 @@ class TuiApp:
                 threads=defaults.threads,
                 timeout=defaults.timeout,
                 detail_timeout=defaults.detail_timeout,
-                max_jobs=defaults.max_jobs,
                 start=defaults.start,
-                details_limit=defaults.details_limit,
                 detail_threads=defaults.detail_threads,
                 show_jobs=defaults.show_jobs,
                 gd_cookie=self._prompt_text("Glassdoor cookie", "Cookie do Glassdoor", defaults.gd_cookie) if portal == "glassdoor" else "",
                 filters_path=self._prompt_text("Filtro JSON", "Caminho do filtro JSON (opcional)", defaults.filters_path),
+                filter_by_keywords=filter_by_keywords,
                 jobs_output=jobs_output,
                 details_output=details_output,
                 redis_url=defaults.redis_url,
@@ -179,6 +178,15 @@ class TuiApp:
         if value is None:
             raise ValueError(f"{title} cancelado")
         return value.strip()
+
+    def _prompt_int(self, title: str, text: str, default: int = 0) -> int:
+        raw = self._prompt_text(title, text, str(default))
+        if not raw:
+            return default
+        try:
+            return int(raw)
+        except ValueError:
+            raise ValueError(f"{title}: numero invalido '{raw}'")
 
     def _start_event_listener(self, state: TuiState) -> None:
         self._stop_event_listener()

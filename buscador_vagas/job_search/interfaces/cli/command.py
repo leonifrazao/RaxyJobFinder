@@ -57,6 +57,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--start", type=int, default=0, help="offset inicial para paginacao (incremento de 60)")
     parser.add_argument("--max-jobs", type=int, default=0, help="maximo de vagas para coletar via paginacao; 0 = apenas pagina inicial")
     parser.add_argument("--detail-threads", type=int, default=5, help="threads paralelas para buscar detalhes das vagas")
+    parser.add_argument("--filter-by-keywords", action="store_true", help="ativa filtro restritivo por keyword no titulo/descricao")
     return parser
 
 
@@ -102,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
         start=args.start,
         max_jobs=args.max_jobs,
         detail_threads=args.detail_threads,
+        filter_by_keywords=args.filter_by_keywords,
     )
     try:
         view.info(f"[bold]Portal:[/] {portal}")

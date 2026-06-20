@@ -174,6 +174,16 @@ class TestBuildParser:
         args = parser.parse_args(["--details-output", "my/details.json"])
         assert args.details_output == "my/details.json"
 
+    def test_filter_by_keywords(self):
+        parser = build_parser()
+        args = parser.parse_args(["--filter-by-keywords"])
+        assert args.filter_by_keywords is True
+
+    def test_filter_by_keywords_default_off(self):
+        parser = build_parser()
+        args = parser.parse_args([])
+        assert args.filter_by_keywords is False
+
     def test_filters(self):
         parser = build_parser()
         args = parser.parse_args(["--filters", "filters/python.json"])

@@ -29,6 +29,7 @@ class TuiState:
     show_jobs: int = 10
     gd_cookie: str = ""
     filters_path: str = ""
+    filter_by_keywords: bool = False
     jobs_output: str = "output/linkedin/vagas.json"
     details_output: str = "output/linkedin/detalhadas.json"
     redis_url: str = "redis://localhost:6379/0"

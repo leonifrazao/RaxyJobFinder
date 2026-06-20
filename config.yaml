@@ -5,8 +5,8 @@ defaults:
   jobs_per_proxy: 5
   max_count: 177
   threads: 8
-  timeout: 12.0
-  detail_timeout: 15.0
+  timeout: 5.0
+  detail_timeout: 5.0
   details_limit: 0
   start: 0
   max_jobs: 0
@@ -16,7 +16,6 @@ defaults:
   gd_cookie: ""
   filters_path: ""
   location_id: ""
-  location_choice: "1"
 
 output:
   jobs_path: "output/{portal}/vagas.json"

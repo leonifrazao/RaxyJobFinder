@@ -374,6 +374,16 @@ class TestJobSearchRequest:
         assert req.valid_count == 10
         assert req.jobs_per_proxy == 3
 
+    def test_filter_by_keywords_default(self):
+        req = JobSearchRequest(
+            proxy_sources=[], keywords="K", location="L",
+            valid_count=1, jobs_per_proxy=1, max_count=1, threads=1,
+            timeout=1.0, detail_timeout=1.0, jobs_output="o", details_output="d",
+            detail_threads=5, filters_path=None, details_limit=0, show_jobs=10,
+            location_id=None, location_choice=None,
+        )
+        assert req.filter_by_keywords is False
+
     def test_default_max_jobs(self):
         req = JobSearchRequest(
             proxy_sources=[], keywords="K", location="L",
