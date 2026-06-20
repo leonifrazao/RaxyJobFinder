@@ -608,6 +608,14 @@ Arquivo JSON com regras de filtragem. O motor suporta operadores `all`, `any`, `
 --filters filters/senior_remote.json
 ```
 
+### `--filter-by-keywords`
+
+Ativa filtro restritivo por keyword no título e descrição. Sem essa flag, a keyword da busca é usada apenas para filtrar o resultado final (vagas sem a keyword no título ou descrição são descartadas). Com `--filter-by-keywords`, o filtro é aplicado durante a coleta — vagas que não contêm a keyword no título são ignoradas antes mesmo do detalhamento.
+
+```
+--filter-by-keywords  # ativa filtro restritivo
+```
+
 ### `--gd-cookie`
 
 Cookie de sessão do Glassdoor (obrigatório para o portal Glassdoor). Faça login no Glassdoor pelo navegador, abra o DevTools (F12) > Network, copie o header `Cookie` de qualquer requisição.
