@@ -80,6 +80,9 @@ class TestBuildSearchUrl:
         url = adapter.build_search_url(q)
         assert "keywords=python" in url
         assert "location=SP" in url
+        assert "trk=guest_homepage-basic_guest_nav_menu_jobs" in url
+        assert "position=1" in url
+        assert "pageNum=0" in url
 
     def test_with_geo_id(self, adapter: LinkedInJobBoardAdapter, sample_query: SearchQuery):
         url = adapter.build_search_url(sample_query)
@@ -105,6 +108,17 @@ class TestBuildSearchUrl:
         q = SearchQuery(keywords="python", location="Estados Unidos", work_type="normal")
         url = adapter.build_search_url(q)
         assert "f_WT" not in url
+
+    def test_under_10_applicants_filter(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", applicant_filter="menos de 10 candidaturas")
+        url = adapter.build_search_url(q)
+        assert "f_EA=true" in url
+        assert "trk=public_jobs_filters_f_EA" in url
+
+    def test_normal_applicants_filter_omits_filter(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", applicant_filter="normal")
+        url = adapter.build_search_url(q)
+        assert "f_EA" not in url
 
 
 class TestJobIdFromUrn:
@@ -164,6 +178,11 @@ class TestBuildSeeMoreUrl:
         query = SearchQuery(keywords="python", location="Estados Unidos", work_type="hybrid")
         url = adapter._build_see_more_url(query, 60)
         assert "f_WT=3" in url
+
+    def test_includes_applicant_filter(self, adapter: LinkedInJobBoardAdapter):
+        query = SearchQuery(keywords="python", location="Estados Unidos", applicant_filter="menos de 10 candidaturas")
+        url = adapter._build_see_more_url(query, 60)
+        assert "f_EA=true" in url
 
 
 class TestParseJobsFromHtml:

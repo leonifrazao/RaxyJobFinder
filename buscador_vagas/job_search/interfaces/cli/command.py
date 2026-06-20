@@ -8,6 +8,7 @@ from loguru import logger
 
 from job_search.application.dto.input.job_search_request import JobSearchRequest
 from job_search.container import JobSearchContainer
+from job_search.domain.search_query import APPLICANT_FILTERS
 from job_search.infrastructure.logging import configure_logging
 from job_search.infrastructure.proxy.proxy_sources import (
     DEFAULT_PROVIDER,
@@ -36,6 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["normal", "remote", "remoto", "hybrid", "hibrido", "híbrido"],
         default="normal",
         help="modalidade da vaga; LinkedIn usa remote/remoto como f_WT=2 e hybrid/hibrido como f_WT=3",
+    )
+    parser.add_argument(
+        "--applicant-filter",
+        choices=APPLICANT_FILTERS,
+        default="normal",
+        help="filtro LinkedIn de candidaturas: normal ou 'menos de 10 candidaturas'",
     )
     parser.add_argument("--valid-count", type=int, default=25, help="quantidade de proxies/bridges funcionais para manter no pool")
     parser.add_argument("--jobs-per-proxy", type=int, default=5, help="quantidade de detalhes de vagas por proxy antes de rotacionar")
@@ -82,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
         location_id=args.location_id,
         location_choice=args.location_choice,
         work_type=args.work_type,
+        applicant_filter=args.applicant_filter,
         valid_count=args.valid_count,
         jobs_per_proxy=args.jobs_per_proxy,
         max_count=args.max_count,

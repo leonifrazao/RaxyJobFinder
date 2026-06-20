@@ -26,6 +26,7 @@ class JobFinder:
         location_id: str | None = None,
         location_choice: int | None = None,
         work_type: str | None = None,
+        applicant_filter: str | None = None,
         proxy_sources: list[str] | None = None,
         proxy_provider: str | None = None,
         valid_count: int | None = None,
@@ -56,6 +57,7 @@ class JobFinder:
         location_id = location_id or cfg.location_id or None
         location_choice = location_choice or cfg.location_choice or None
         work_type = work_type or cfg.work_type or None
+        applicant_filter = applicant_filter or cfg.applicant_filter or "normal"
         proxy_provider = proxy_provider or DEFAULT_PROVIDER
         valid_count = valid_count if valid_count is not None else cfg.valid_count
         jobs_per_proxy = jobs_per_proxy if jobs_per_proxy is not None else cfg.jobs_per_proxy
@@ -85,6 +87,7 @@ class JobFinder:
         self._location_id = location_id
         self._location_choice = location_choice
         self._work_type = work_type
+        self._applicant_filter = applicant_filter
         self._valid_count = valid_count
         self._jobs_per_proxy = jobs_per_proxy
         self._max_count = max_count
@@ -176,6 +179,7 @@ class JobFinder:
             location_id=self._location_id,
             location_choice=self._location_choice,
             work_type=self._work_type,
+            applicant_filter=self._applicant_filter,
             valid_count=self._valid_count,
             jobs_per_proxy=self._jobs_per_proxy,
             max_count=self._max_count,

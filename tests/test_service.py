@@ -169,6 +169,7 @@ class TestJobSearchService:
     ):
         publisher = FakeEventPublisher()
         service = build_service(mock_adapter, mock_proxy_pool, mock_repository, mock_filter_repository, mock_view, publisher)
+        mock_adapter.name = "linkedin"
         request = replace(sample_request, location_id="103644278", work_type="remote", details_limit=1)
         job = JobSummary("linkedin", "e1", "Data Analyst")
         mock_adapter.search_jobs.return_value = SearchResult(
@@ -253,6 +254,18 @@ class TestJobSearchService:
     )
     def test_normalize_modalidade(self, service, work_type, expected):
         assert service._normalize_modalidade(work_type) == expected
+
+    def test_rejects_work_type_outside_linkedin(self, service, sample_request):
+        request = replace(sample_request, work_type="remote")
+
+        with pytest.raises(ValueError, match="LinkedIn"):
+            service.run(request)
+
+    def test_rejects_applicant_filter_outside_linkedin(self, service, sample_request):
+        request = replace(sample_request, applicant_filter="menos de 10 candidaturas")
+
+        with pytest.raises(ValueError, match="LinkedIn"):
+            service.run(request)
 
     def test_prepare_bridges(self, service, mock_proxy_pool, sample_request):
         query = SearchQuery("Python", "Brasil")

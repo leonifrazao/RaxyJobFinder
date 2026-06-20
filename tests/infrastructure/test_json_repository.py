@@ -36,7 +36,7 @@ class TestSaveRaw:
 class TestSaveJobs:
     def test_serializes_job_summary_list(self, repo: JsonJobRepository, tmp_path: pytest.TempPathFactory):
         jobs = [
-            JobSummary(provider="linkedin", external_id="1", title="Eng", company="ACME"),
+            JobSummary(provider="linkedin", external_id="1", title="Eng", company="ACME", listed_at="2024-01-15"),
             JobSummary(provider="linkedin", external_id="2", title="Dev", company="ABC"),
         ]
         output = str(tmp_path / "jobs.json")
@@ -46,6 +46,7 @@ class TestSaveJobs:
         assert len(data) == 2
         assert data[0]["job_id"] == "1"
         assert data[0]["title"] == "Eng"
+        assert data[0]["listed_at"] == 1705276800
         assert data[1]["title"] == "Dev"
 
     def test_serializes_job_posting_list(self, repo: JsonJobRepository, tmp_path: pytest.TempPathFactory):

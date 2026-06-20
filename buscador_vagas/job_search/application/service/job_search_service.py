@@ -23,7 +23,7 @@ from job_search.domain.detailing import JobDetailingSession
 from job_search.domain.job_posting import JobPosting
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.proxy import BridgeEndpoint
-from job_search.domain.search_query import SearchQuery
+from job_search.domain.search_query import APPLICANT_FILTER_NORMAL, SearchQuery
 
 
 class JobSearchService(JobSearchUseCase):
@@ -48,6 +48,7 @@ class JobSearchService(JobSearchUseCase):
         self.event_reporter = event_reporter
 
     def run(self, request: JobSearchRequest) -> int:
+        self._validate_linkedin_only_options(request)
         log = logger.bind(
             component="job_search_service",
             portal=self.adapter.name,
@@ -63,7 +64,13 @@ class JobSearchService(JobSearchUseCase):
             location=request.location,
             proxy_sources_count=len(request.proxy_sources),
         )
-        query = SearchQuery(request.keywords, request.location, request.location_id, request.work_type)
+        query = SearchQuery(
+            request.keywords,
+            request.location,
+            request.location_id,
+            request.work_type,
+            request.applicant_filter,
+        )
         bridges = self._prepare_bridges(query, request)
         try:
             query = self._resolve_location(query, bridges, request)
@@ -86,6 +93,14 @@ class JobSearchService(JobSearchUseCase):
             return 0
         finally:
             self.proxy_pool.stop()
+
+    def _validate_linkedin_only_options(self, request: JobSearchRequest) -> None:
+        if self.adapter.name == "linkedin":
+            return
+        if request.work_type and request.work_type.strip().casefold() not in {"normal", "presencial"}:
+            raise ValueError("A modalidade (--work-type) so pode ser escolhida no LinkedIn.")
+        if request.applicant_filter and request.applicant_filter != APPLICANT_FILTER_NORMAL:
+            raise ValueError("O filtro de candidaturas so pode ser usado no LinkedIn.")
 
     def _finish_without_working_bridge(self, log: Any) -> int:
         log.warning("job_search_no_working_bridge")

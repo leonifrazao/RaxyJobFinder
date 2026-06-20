@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 from .text import clean_text
@@ -31,7 +32,7 @@ class JobSummary:
             "title": self.title,
             "company": self.company,
             "location": self.location,
-            "listed_at": self.listed_at,
+            "listed_at": _to_unix_timestamp(self.listed_at),
             "listed_text": self.listed_text,
             "url": self.url,
             "company_url": self.company_url,
@@ -39,3 +40,21 @@ class JobSummary:
         }
         data.update(self.provider_data)
         return data
+
+
+def _to_unix_timestamp(value: object) -> int | str:
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        text = str(value).strip()
+        if not text:
+            return ""
+        try:
+            dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return text
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return int(dt.timestamp())

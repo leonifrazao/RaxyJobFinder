@@ -17,6 +17,7 @@ FULL_VALID_FIELDS = {
     "location_id": Field("106057199"),
     "location_choice": Field("2"),
     "work_type": Field("remote"),
+    "applicant_filter": Field("menos de 10 candidaturas"),
     "provider": Field("united-states"),
     "valid_count": Field("1"),
     "jobs_per_proxy": Field("3"),
@@ -48,6 +49,7 @@ class TestTuiInputReader:
         assert state.location_id == "106057199"
         assert state.location_choice == "2"
         assert state.work_type == "remote"
+        assert state.applicant_filter == "menos de 10 candidaturas"
         assert state.provider == "united-states"
         assert state.valid_count == 1
         assert state.jobs_per_proxy == 3

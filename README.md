@@ -11,7 +11,7 @@ Raxy consulta LinkedIn, Gupy e Glassdoor em paralelo, rotaciona proxies automati
 ### pip (recomendado)
 
 ```bash
-pip install botasaurus dependency-injector beautifulsoup4 requests urllib3 rich
+pip install botasaurus dependency-injector beautifulsoup4 requests urllib3 rich pytermgui PyYAML loguru redis
 pip install /caminho/para/proxy_framework/
 pip install -e .
 ```
@@ -48,9 +48,8 @@ O `shell.nix` configura o ambiente Python, baixa dependências faltantes e detec
 python buscador_vagas/buscador.py --keywords "Python" --location "São Paulo"
 
 # Resultados salvos em:
-#   output/vagas.json              — vagas básicas
-#   output/vagas_detalhadas.json   — vagas com descrição completa
-#   output/linkedin_response.html  — resposta bruta do portal
+#   output/linkedin/vagas.json      — vagas básicas no schema canônico
+#   output/linkedin/detalhadas.json — vagas com descrição completa
 ```
 
 ---
@@ -162,8 +161,10 @@ Use `job.to_dict()` para serializar em dicionário (útil para JSON).
 | `location` | `"Brasil"` | Localização |
 | `location_id` | `None` | ID da localização (pula typeahead) |
 | `location_choice` | `None` | Índice 1-based no typeahead |
+| `work_type` | `"normal"` | Modelo de trabalho, exclusivo do LinkedIn: `normal`, `remote`/`remoto` ou `hybrid`/`hibrido`/`híbrido` |
+| `applicant_filter` | `"normal"` | Filtro de candidaturas do LinkedIn: `normal` ou `menos de 10 candidaturas` |
 | `proxy_sources` | `None` | Lista de URLs/arquivos de proxy |
-| `proxy_provider` | `"all"` | `brazil`, `united-states`, `canada`, etc. |
+| `proxy_provider` | `"united-states"` | `brazil`, `united-states`, `canada`, etc. |
 | `valid_count` | `25` | Bridges no pool |
 | `jobs_per_proxy` | `5` | Vagas por proxy antes de rotacionar |
 | `max_count` | `177` | Máximo de configs de proxy a carregar |
@@ -231,6 +232,43 @@ Regras de filtragem em JSON. O motor suporta operadores lógicos (`all`, `any`, 
 
 ```bash
 python buscador_vagas/buscador.py --filters filtros/python.json
+```
+
+### Modelo de trabalho
+
+Use `--work-type` para pedir vagas remotas ou híbridas somente no LinkedIn. O filtro é enviado para a busca pública com `f_WT=2` para remoto e `f_WT=3` para híbrido. Se `--work-type` diferente de `normal` for usado na Gupy ou no Glassdoor, a busca é recusada.
+
+```bash
+python buscador_vagas/buscador.py --portal linkedin --keywords Python --work-type remote
+python buscador_vagas/buscador.py --portal linkedin --keywords Python --work-type híbrido
+```
+
+Aliases aceitos: `remote`/`remoto`, `hybrid`/`hibrido`/`híbrido` e `normal`.
+
+Em todos os portais, os resultados salvos recebem o campo canônico `modalidade` com `remoto`, `híbrido` ou `presencial`. Quando o portal não entrega a modalidade diretamente, o Raxy tenta inferir a partir de campos como `workplaceType`, `isRemoteWork`, critérios da vaga e textos de localização/detalhes. Na Gupy, vagas sem cidade/local explícito são tratadas como `REMOTO` e recebem modalidade remota quando aplicável.
+
+### Candidaturas no LinkedIn
+
+Use `--applicant-filter` para alternar entre a busca normal e o filtro de vagas com menos de 10 candidaturas no LinkedIn. Só existem dois valores aceitos:
+
+```bash
+python buscador_vagas/buscador.py --portal linkedin --applicant-filter normal
+python buscador_vagas/buscador.py --portal linkedin --applicant-filter "menos de 10 candidaturas"
+```
+
+O modo `normal` não adiciona filtro extra. O modo `menos de 10 candidaturas` envia `f_EA=true` na URL do LinkedIn. Se esse filtro for usado na Gupy ou no Glassdoor, a busca é recusada.
+
+### Requisitos extraídos
+
+Durante o detalhamento, o campo `criteria.requisitos` é preenchido automaticamente a partir da descrição da vaga com keywords técnicas e comportamentais conhecidas, por exemplo `python`, `sql`, `power_bi`, `cloud`, `docker`, `scrum`, `comunicacao`, `lideranca` e `testes`.
+
+Esse campo pode ser usado nos filtros:
+
+```json
+{
+  "fields": ["criteria.requisitos"],
+  "contains": ["python", "sql"]
+}
 ```
 
 ### Threads paralelas
@@ -361,17 +399,19 @@ O filtro opera sobre o dicionário completo da vaga (básico + detalhado). Os ca
 | `title` | básico | Título da vaga |
 | `company` | básico | Nome da empresa |
 | `location` | básico | Localização |
+| `modalidade` | básico/canônico | `remoto`, `híbrido` ou `presencial` |
 | `description` | detalhado | Descrição completa |
-| `criteria` | detalhado | Objeto com critérios (ex: `{"Tipo": "Remoto", "Nível": "Sênior"}`) |
+| `criteria` | detalhado | Objeto com critérios (ex: `{"Tipo": "Efetivo/CLT", "Nivel de experiencia": "N/A"}`) |
 | `criteria.Tipo` | detalhado | Acesso via dot notation, ex: tipo de contratação |
-| `criteria.Nível` | detalhado | Nível hierárquico (Sênior, Pleno, etc.) |
+| `criteria.Nivel de experiencia` | detalhado | Nível hierárquico quando informado pelo portal |
+| `criteria.requisitos` | detalhado | Lista de keywords inferidas da descrição |
 | `listed_text` | básico | Texto de quando foi publicada |
 
-Para acessar campos aninhados, use **dot notation**: `criteria.Tipo`, `criteria.Nível`.
+Para acessar campos aninhados, use **dot notation**: `criteria.Tipo`, `criteria.Nivel de experiencia`.
 
 ### Como montar seu próprio filtro
 
-1. **Execute uma busca primeiro** para gerar `output/vagas_detalhadas.json`
+1. **Execute uma busca primeiro** para gerar `output/linkedin/detalhadas.json`
 2. **Veja a estrutura** dos campos no JSON gerado
 3. **Crie um arquivo `.json`** com as regras desejadas
 4. **Passe com `--filters`**
@@ -383,7 +423,7 @@ Exemplo passo a passo:
 python buscador_vagas/buscador.py --keywords "Python" --details-limit 5
 
 # 2. Olhe o arquivo gerado para conhecer os campos
-cat output/vagas_detalhadas.json | python -m json.tool | head -80
+python -m json.tool output/linkedin/detalhadas.json
 
 # 3. Crie seu filtro, por exemplo meu_filtro.json:
 # {
@@ -447,6 +487,25 @@ Fonte de proxies do repositório `F0rc3Run/splitted-by-country`. Padrão: `unite
 ```
 --provider brazil
 --provider united-states
+```
+
+### `--work-type`
+
+Modelo de trabalho desejado, exclusivo do LinkedIn. Padrão: `normal`.
+
+```
+--work-type normal     # não aplica filtro de modalidade no LinkedIn
+--work-type remote     # remoto; aceita também remoto
+--work-type hybrid     # híbrido; aceita também hibrido/híbrido
+```
+
+### `--applicant-filter`
+
+Filtro de candidaturas, exclusivo do LinkedIn. Padrão: `normal`.
+
+```
+--applicant-filter normal
+--applicant-filter "menos de 10 candidaturas"  # adiciona f_EA=true
 ```
 
 ### `--proxy-source`
@@ -521,14 +580,13 @@ Limita quantas vagas serão detalhadas. Use `0` para detalhar todas.
 --details-limit 0     # detalha todas as vagas encontradas
 ```
 
-### `--output` / `--jobs-output` / `--details-output`
+### `--jobs-output` / `--details-output`
 
 Caminhos dos arquivos de saída.
 
 ```
---output output/linkedin_response.html         # HTML bruto da resposta
---jobs-output output/vagas.json                # vagas básicas
---details-output output/vagas_detalhadas.json  # vagas com descrição
+--jobs-output output/linkedin/vagas.json       # vagas básicas
+--details-output output/linkedin/detalhadas.json  # vagas com descrição
 ```
 
 ### `--show-jobs`
@@ -561,9 +619,15 @@ Cookie de sessão do Glassdoor (obrigatório para o portal Glassdoor). Faça log
 
 ## Campos retornados
 
-**Vagas básicas:** `provider`, `job_id`, `title`, `company`, `location`, `listed_at`, `listed_text`, `url`, `company_url`, `logo_url`, `entity_urn`, `reference_id`, `tracking_id`, `row`, `column`
+Os arquivos JSON são salvos em um schema canônico estável. Campos internos específicos de cada portal ficam em `provider_data` durante a execução, mas não são persistidos por padrão.
 
-**Vagas detalhadas (adicional):** `description`, `criteria`, `detail_title`, `detail_company`, `detail_location`, `detail_posted_text`, `detail_applicants_text`, `apply_text`, `detail_url`, `detail_logo_url`, `detail_status_code`, `detail_error`
+**Vagas básicas:** `provider`, `job_id`, `title`, `company`, `location`, `listed_at`, `listed_text`, `url`, `company_url`, `logo_url`, `modalidade`
+
+`listed_at` é salvo como Unix timestamp em segundos quando o portal fornece uma data absoluta. Campos textuais, como `listed_text` e `detail_posted_text`, continuam preservando o texto original do portal.
+
+**Vagas detalhadas (adicional):** `detail_title`, `detail_company`, `detail_company_url`, `detail_location`, `detail_posted_text`, `detail_applicants_text`, `description`, `criteria`, `apply_text`, `detail_url`, `detail_logo_url`, `detail_status_code`, `detail_html_size`, `detail_bridge_index`
+
+`criteria.requisitos` contém a lista de requisitos/keywords inferidos da descrição quando o detalhamento encontra esses termos.
 
 ---
 
@@ -640,7 +704,7 @@ Provedores disponíveis: `united-states`, `brazil`, `canada`, `germany`, `nether
 ## Testes
 
 ```bash
-pytest tests/ -v
+nix-shell --run 'python -m pytest'
 ```
 
 Estrutura: `tests/domain/`, `tests/application/`, `tests/infrastructure/`, `tests/modules/`, `tests/tui/`, `tests/view/`.

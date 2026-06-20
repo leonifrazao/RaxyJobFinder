@@ -97,13 +97,19 @@ class TestSearchQuery:
         assert q.location_id is None
 
     def test_with_location_returns_new_query(self):
-        q = SearchQuery("Python", "Brasil")
+        q = SearchQuery("Python", "Brasil", work_type="remote", applicant_filter="menos de 10 candidaturas")
         loc = LocationOption("106057199", "Brasil")
         q2 = q.with_location(loc)
         assert q2 is not q
         assert q2.location == "Brasil"
         assert q2.location_id == "106057199"
         assert q2.keywords == "Python"
+        assert q2.work_type == "remote"
+        assert q2.applicant_filter == "menos de 10 candidaturas"
+
+    def test_invalid_applicant_filter_raises(self):
+        with pytest.raises(ValueError, match="applicant_filter"):
+            SearchQuery("Python", "Brasil", applicant_filter="qualquer")
 
 
 class TestJobSummary:
@@ -136,7 +142,7 @@ class TestJobSummary:
         assert d["title"] == "Dev"
         assert d["company"] == "Company"
         assert d["location"] == "SP"
-        assert d["listed_at"] == "2024-01-01"
+        assert d["listed_at"] == 1704067200
         assert d["listed_text"] == "1 day ago"
         assert d["url"] == "http://url"
         assert d["company_url"] == "http://company"
@@ -147,6 +153,20 @@ class TestJobSummary:
         j = JobSummary("linkedin", "ext-5", "Dev", provider_data={"extra": "data"})
         d = j.to_dict()
         assert d["extra"] == "data"
+
+    def test_to_dict_converts_iso_datetime_to_unix_timestamp(self):
+        j = JobSummary("gupy", "ext-6", "Dev", listed_at="2024-01-15T10:00:00.000Z")
+
+        d = j.to_dict()
+
+        assert d["listed_at"] == 1705312800
+
+    def test_to_dict_preserves_unknown_date_text(self):
+        j = JobSummary("glassdoor", "ext-7", "Dev", listed_at="ontem")
+
+        d = j.to_dict()
+
+        assert d["listed_at"] == "ontem"
 
 
 class TestJobDetails:
