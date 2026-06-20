@@ -2,52 +2,99 @@ from __future__ import annotations
 
 import os
 import threading
-from collections.abc import Callable
+from pathlib import Path
+from collections.abc import Callable, Sequence
+from typing import Protocol
 
-import pytermgui as ptg
 from loguru import logger
+from prompt_toolkit import print_formatted_text
+from prompt_toolkit.shortcuts import input_dialog, message_dialog, radiolist_dialog, yes_no_dialog
 
-from job_search.application.events import SearchEventName
 from job_search.application.ports import SearchEventSubscriber
-from job_search.infrastructure.config import load_settings
-from job_search.infrastructure.logging import resolve_error_log_path
+from job_search.infrastructure.config import find_config_path, load_settings
 from job_search.infrastructure.messaging.redis_search_event_subscriber import RedisSearchEventSubscriber
+from job_search.interfaces.tui.tui_event_formatter import TuiEventFormatter
 from job_search.interfaces.tui.tui_search_runner import TuiSearchRunner
 from job_search.interfaces.tui.tui_state import TuiState
 
 
-PENDING = "[dim]aguardando...[/]"
-PROCESSING = "[yellow]processando...[/]"
-
+Choice = tuple[str, str]
 SubscriberFactory = Callable[[str, str], SearchEventSubscriber]
+
+
+class TuiPrompter(Protocol):
+    def select(self, title: str, text: str, values: Sequence[Choice], default: str) -> str | None: ...
+
+    def text(self, title: str, text: str, default: str = "") -> str | None: ...
+
+    def confirm(self, title: str, text: str, default: bool = False) -> bool | None: ...
+
+    def message(self, title: str, text: str) -> None: ...
+
+
+class PromptToolkitPrompter:
+    def select(self, title: str, text: str, values: Sequence[Choice], default: str) -> str | None:
+        ordered_values = _default_first(values, default)
+        return radiolist_dialog(title=title, text=text, values=list(ordered_values)).run()
+
+    def text(self, title: str, text: str, default: str = "") -> str | None:
+        return input_dialog(title=title, text=text, default=default).run()
+
+    def confirm(self, title: str, text: str, default: bool = False) -> bool | None:
+        result = yes_no_dialog(title=title, text=text).run()
+        return default if result is None else result
+
+    def message(self, title: str, text: str) -> None:
+        message_dialog(title=title, text=text).run()
 
 
 class TuiApp:
     def __init__(
         self,
-        reader: TuiInputReader | None = None,
         runner: TuiSearchRunner | None = None,
         subscriber_factory: SubscriberFactory | None = None,
+        prompter: TuiPrompter | None = None,
+        event_printer: Callable[[str], None] | None = None,
+        config_path: str | Path = "config.yaml",
     ) -> None:
-        self._reader = reader or TuiInputReader()
         self._runner = runner or TuiSearchRunner()
         self._subscriber_factory = subscriber_factory or self._build_subscriber
-        self._search_started = False
-        self._manager: ptg.WindowManager | None = None
+        self._prompter = prompter or PromptToolkitPrompter()
+        self._formatter = TuiEventFormatter()
+        self._event_printer = event_printer or print_formatted_text
         self._event_stop_event: threading.Event | None = None
         self._event_thread: threading.Thread | None = None
-        self._fields: dict[str, ptg.InputField] = {}
-        self._proxy_label: ptg.Label | None = None
-        self._search_label: ptg.Label | None = None
-        self._detail_label: ptg.Label | None = None
-        self._save_label: ptg.Label | None = None
-        self._tui_cfg = load_settings().tui
+        self._event_lines: list[str] = []
+        self._config_path = Path(config_path)
 
     def run(self) -> int:
-        self._search_started = False
-        try:
-            self._run_window()
+        config_path = find_config_path(str(self._config_path))
+        if config_path is None:
+            self._prompter.message(
+                "Config obrigatorio",
+                f"Crie um arquivo {self._config_path} antes de abrir a TUI.",
+            )
+            return 1
+
+        load_settings(str(config_path), reload=True)
+        state = self._prompt_state(TuiState.from_config())
+        if state is None:
             return 0
+
+        os.environ["RAXY_REDIS_URL"] = state.redis_url
+        os.environ["RAXY_REDIS_CHANNEL"] = state.events_channel
+        self._start_event_listener(state)
+        try:
+            result = self._runner.run(state)
+            self._prompter.message(
+                "Busca finalizada",
+                f"Resultados salvos em:\n{state.jobs_output}\n{state.details_output}",
+            )
+            return result
+        except Exception as exc:
+            logger.bind(component="tui", error=str(exc)).exception("tui_backend_failed")
+            self._prompter.message("Erro na busca", str(exc))
+            return 1
         finally:
             self._stop_event_listener()
 
@@ -55,139 +102,95 @@ class TuiApp:
     def _build_subscriber(redis_url: str, channel: str) -> SearchEventSubscriber:
         return RedisSearchEventSubscriber(redis_url=redis_url, channel=channel)
 
-    def _run_window(self) -> None:
-        with ptg.YamlLoader() as loader:
-            loader.load(_build_ptg_config(self._tui_cfg))
-
-        self._fields = self._build_fields(TuiState.from_config())
-        with ptg.WindowManager() as manager:
-            self._manager = manager
-            window = self._build_window()
-            manager.add(window)
-
-    def _build_fields(self, state: TuiState) -> dict[str, ptg.InputField]:
+    def _prompt_state(self, defaults: TuiState) -> TuiState | None:
         settings = load_settings()
-        default_provider = settings.proxy.default_provider
-        return {
-            "portal": ptg.InputField(state.portal, prompt="Portal: "),
-            "keywords": ptg.InputField(state.keywords, prompt="Keywords: "),
-            "location": ptg.InputField(state.location, prompt="Location: "),
-            "location_id": ptg.InputField(state.location_id, prompt="Loc ID: "),
-            "location_choice": ptg.InputField(state.location_choice, prompt="Loc choice: "),
-            "work_type": ptg.InputField(state.work_type, prompt="Work type: "),
-            "under_10_applicants": ptg.InputField(str(state.under_10_applicants), prompt="Under 10 applicants: "),
-            "provider": ptg.InputField(default_provider, prompt="Provider: "),
-            "valid_count": ptg.InputField(str(state.valid_count), prompt="Valid: "),
-            "jobs_per_proxy": ptg.InputField(str(state.jobs_per_proxy), prompt="Jobs/proxy: "),
-            "max_count": ptg.InputField(str(state.max_count), prompt="Max cfgs: "),
-            "threads": ptg.InputField(str(state.threads), prompt="Threads: "),
-            "timeout": ptg.InputField(str(state.timeout), prompt="Timeout: "),
-            "detail_timeout": ptg.InputField(str(state.detail_timeout), prompt="Det timeout: "),
-            "max_jobs": ptg.InputField(str(state.max_jobs), prompt="Max jobs: "),
-            "start": ptg.InputField(str(state.start), prompt="Start: "),
-            "details_limit": ptg.InputField(str(state.details_limit), prompt="Det limit: "),
-            "detail_threads": ptg.InputField(str(state.detail_threads), prompt="Det threads: "),
-            "show_jobs": ptg.InputField(str(state.show_jobs), prompt="Show: "),
-            "gd_cookie": ptg.InputField(state.gd_cookie, prompt="GD cookie: "),
-            "filters_path": ptg.InputField(state.filters_path, prompt="Filters: "),
-            "jobs_output": ptg.InputField(state.jobs_output, prompt="Jobs out: "),
-            "details_output": ptg.InputField(state.details_output, prompt="Details out: "),
-            "redis_url": ptg.InputField(state.redis_url, prompt="Redis: "),
-            "events_channel": ptg.InputField(state.events_channel, prompt="Channel: "),
-        }
-
-    def _reset_fields(self) -> None:
-        defaults = TuiState.from_config()
-        for key, default_field in self._build_fields(defaults).items():
-            if key in self._fields:
-                self._fields[key].value = default_field.value
-
-    def _reset_status(self) -> None:
-        if self._proxy_label is not None:
-            self._proxy_label.value = f"proxy:    {PENDING}"
-        if self._search_label is not None:
-            self._search_label.value = f"busca:    {PENDING}"
-        if self._detail_label is not None:
-            self._detail_label.value = f"detalhes: {PENDING}"
-        if self._save_label is not None:
-            self._save_label.value = f"salvar:   {PENDING}"
-
-    def _build_window(self) -> ptg.Window:
-        self._proxy_label = ptg.Label(f"proxy:    {PENDING}")
-        self._search_label = ptg.Label(f"busca:    {PENDING}")
-        self._detail_label = ptg.Label(f"detalhes: {PENDING}")
-        self._save_label = ptg.Label(f"salvar:   {PENDING}")
-        f = self._fields
-        window = ptg.Window(
-            "[bold 75]Raxy Job Finder[/]",
-            "[dim]TUI — preencha e clique Buscar[/]",
-            "",
-            _section("BUSCA"),
-            f["portal"], f["keywords"], f["location"],
-            f["location_id"], f["location_choice"],
-            f["work_type"], f["under_10_applicants"],
-            "",
-            _section("PROXY"),
-            f["provider"], f["valid_count"],
-            f["jobs_per_proxy"], f["max_count"],
-            f["threads"], f["timeout"],
-            "",
-            _section("DETALHES / PAGINACAO"),
-            f["detail_timeout"], f["detail_threads"],
-            f["details_limit"], f["max_jobs"],
-            f["start"], f["show_jobs"],
-            "",
-            _section("GLASSDOOR / FILTROS"),
-            f["gd_cookie"], f["filters_path"],
-            "",
-            _section("SAIDA / REDIS"),
-            f["jobs_output"], f["details_output"],
-            f["redis_url"], f["events_channel"],
-            "",
-            _section("STATUS"),
-            self._proxy_label,
-            self._search_label,
-            self._detail_label,
-            self._save_label,
-            "",
-            ["Buscar", lambda *_: self._submit()],
-            ["Limpar campos", lambda *_: self._reset_fields()],
-            ["Ajuda CLI", lambda *_: self._show_help()],
-            ["Sair", lambda *_: self._manager.stop() if self._manager else None],
-            width=self._tui_cfg.window_width,
-            box=self._tui_cfg.window_box,
+        portal = self._prompter.select(
+            "Portal",
+            "Escolha o portal de vagas.",
+            [(portal, portal) for portal in settings.portals],
+            defaults.portal,
         )
-        return window.set_title(self._tui_cfg.window_title).center()
+        if portal is None:
+            return None
 
-    def _submit(self) -> None:
-        if self._search_started:
-            return
+        work_type = "normal"
+        under_10_applicants = False
+        if portal == "linkedin":
+            selected_work_type = self._prompter.select(
+                "Modelo de trabalho",
+                "Filtro de modalidade do LinkedIn.",
+                [
+                    ("normal", "Normal/presencial"),
+                    ("remote", "Remoto"),
+                    ("hybrid", "Hibrido"),
+                ],
+                defaults.work_type,
+            )
+            if selected_work_type is None:
+                return None
+            work_type = selected_work_type
+            under_10 = self._prompter.confirm(
+                "Menos de 10 candidaturas",
+                "Filtrar vagas do LinkedIn com menos de 10 candidaturas?",
+                defaults.under_10_applicants,
+            )
+            if under_10 is None:
+                return None
+            under_10_applicants = under_10
+
+        output_cfg = settings.output
+        jobs_output = output_cfg.jobs_path.format(portal=portal)
+        details_output = output_cfg.details_path.format(portal=portal)
+
         try:
-            state = self._reader.read(self._fields)
+            return TuiState(
+                portal=portal,
+                keywords=self._prompt_text("Keywords", "Termo de busca", defaults.keywords),
+                location=self._prompt_text("Localizacao", "Texto de localizacao", defaults.location),
+                location_id=self._prompt_text("Location ID", "ID da localizacao (opcional)", defaults.location_id),
+                location_choice=self._prompt_text("Location choice", "Indice 1-based da localizacao", defaults.location_choice),
+                work_type=work_type,
+                under_10_applicants=under_10_applicants,
+                provider=defaults.provider,
+                valid_count=defaults.valid_count,
+                jobs_per_proxy=defaults.jobs_per_proxy,
+                max_count=defaults.max_count,
+                threads=defaults.threads,
+                timeout=defaults.timeout,
+                detail_timeout=defaults.detail_timeout,
+                max_jobs=defaults.max_jobs,
+                start=defaults.start,
+                details_limit=defaults.details_limit,
+                detail_threads=defaults.detail_threads,
+                show_jobs=defaults.show_jobs,
+                gd_cookie=self._prompt_text("Glassdoor cookie", "Cookie do Glassdoor", defaults.gd_cookie) if portal == "glassdoor" else "",
+                filters_path=self._prompt_text("Filtro JSON", "Caminho do filtro JSON (opcional)", defaults.filters_path),
+                jobs_output=jobs_output,
+                details_output=details_output,
+                redis_url=defaults.redis_url,
+                events_channel=defaults.events_channel,
+            )
         except ValueError as exc:
-            self._show_error(f"Valor numerico invalido: {exc}")
-            return
-        self._search_started = True
-        self._reset_status()
-        os.environ["RAXY_REDIS_URL"] = state.redis_url
-        os.environ["RAXY_REDIS_CHANNEL"] = state.events_channel
-        self._set_proxy(PROCESSING)
-        self._set_search(PENDING)
-        self._set_detail(PENDING)
-        self._set_save(PENDING)
-        self._start_event_listener(state)
-        self._start_search(state)
+            self._prompter.message("Valor invalido", str(exc))
+            return None
+
+    def _prompt_text(self, title: str, text: str, default: str = "") -> str:
+        value = self._prompter.text(title, text, default)
+        if value is None:
+            raise ValueError(f"{title} cancelado")
+        return value.strip()
 
     def _start_event_listener(self, state: TuiState) -> None:
         self._stop_event_listener()
         stop_event = threading.Event()
         subscriber = self._subscriber_factory(state.redis_url, state.events_channel)
 
-        def handle(event: dict) -> None:
-            self._handle_event(event)
-
         self._event_stop_event = stop_event
-        self._event_thread = threading.Thread(target=subscriber.listen, args=(stop_event, handle), daemon=True)
+        self._event_thread = threading.Thread(
+            target=subscriber.listen,
+            args=(stop_event, self._handle_event),
+            daemon=True,
+        )
         self._event_thread.start()
 
     def _stop_event_listener(self) -> None:
@@ -198,205 +201,13 @@ class TuiApp:
         self._event_stop_event = None
         self._event_thread = None
 
-    def _start_search(self, state: TuiState) -> None:
-        def run() -> None:
-            try:
-                self._runner.run(state)
-            except Exception as exc:
-                logger.bind(component="tui", error=str(exc)).exception("tui_backend_failed")
-                self._set_proxy("[red]falha[/]")
-                self._set_search("[red]falha[/]")
-                self._set_detail("[red]falha[/]")
-                self._set_save("[red]falha[/]")
-            finally:
-                self._search_started = False
-                self._stop_event_listener()
-
-        threading.Thread(target=run, daemon=True).start()
-
     def _handle_event(self, event: dict) -> None:
-        name = str(event.get("name", ""))
-        message = str(event.get("message", ""))
-        payload = event.get("payload") or {}
-        error = payload.get("error") or ""
-
-        if name.startswith("proxy_"):
-            if name == SearchEventName.PROXY_PREPARE_STARTED.value:
-                self._set_proxy("[yellow]baixando proxies...[/]")
-            elif name == SearchEventName.PROXY_TESTING.value:
-                self._set_proxy("[yellow]testando proxies...[/]")
-            elif name == SearchEventName.PROXY_TESTED.value:
-                w = payload.get("working", 0)
-                t = payload.get("total", 0)
-                self._set_proxy(f"[green]{w}/{t} OK[/], [yellow]iniciando bridges...[/]")
-            elif name == SearchEventName.PROXY_VERIFYING.value:
-                self._set_proxy(f"[yellow]verificando bridges...[/]")
-            elif name == SearchEventName.PROXY_BRIDGE_VERIFIED.value:
-                idx = payload.get("index", 0)
-                total = payload.get("total", 0)
-                self._set_proxy(f"[green]bridge {idx}/{total} OK[/]")
-            elif name == SearchEventName.PROXY_BRIDGE_FAILED.value:
-                idx = payload.get("index", 0)
-                total = payload.get("total", 0)
-                self._set_proxy(f"[red]bridge {idx}/{total} falhou[/]")
-            elif name == SearchEventName.PROXY_NO_WORKING.value:
-                self._set_proxy("[red]nenhuma proxy funcional![/]")
-            elif name == SearchEventName.PROXY_PREPARE_FINISHED.value:
-                bridges = payload.get("bridges", 0)
-                self._set_proxy(f"[green]{bridges} bridges ativas[/]")
-
-        elif name.startswith("search_"):
-            if name == SearchEventName.SEARCH_BRIDGE_ATTEMPT.value:
-                self._set_search("[yellow]buscando vagas...[/]")
-            elif name == SearchEventName.SEARCH_BRIDGE_SUCCEEDED.value:
-                jobs = payload.get("jobs_count", 0)
-                status = payload.get("status_code", 0)
-                self._set_search(f"[green]{jobs} vagas encontradas[/] (HTTP {status})")
-            elif name == SearchEventName.SEARCH_BRIDGE_FAILED.value:
-                self._set_search(f"[red]falha na busca[/]")
-
-        elif name == SearchEventName.DETAIL_STARTED.value:
-            total = payload.get("total", 0)
-            self._set_detail(f"[yellow]detalhando 0/{total}...[/]")
-            self._detail_total = total
-        elif name == SearchEventName.DETAIL_PROGRESS.value:
-            done = payload.get("done", 0)
-            total = payload.get("total", 0)
-            ok = payload.get("ok", 0)
-            self._set_detail(f"[yellow]{done}/{total}[/] ([green]{ok} OK[/])")
-        elif name == SearchEventName.DETAIL_FAILED.value:
-            self._set_detail(f"[red]{message}[/]")
-
-        elif name == SearchEventName.SAVE_STARTED.value:
-            self._set_save("[yellow]salvando vagas...[/]")
-        elif name == SearchEventName.SAVE_DETAILS_STARTED.value:
-            self._set_save("[yellow]salvando detalhes...[/]")
-        elif name == SearchEventName.SAVE_FINISHED.value:
-            self._set_save("[green]resultados salvos[/]")
-
-        elif name == SearchEventName.JOB_SEARCH_FINISHED.value:
-            jobs = payload.get("jobs_detailed", 0)
-            self._set_detail(f"[green]{jobs} vagas detalhadas[/]")
-
-    def _set_proxy(self, value: str) -> None:
-        if self._proxy_label is not None:
-            self._proxy_label.value = f"proxy:    {value}"
-
-    def _set_search(self, value: str) -> None:
-        if self._search_label is not None:
-            self._search_label.value = f"busca:    {value}"
-
-    def _set_detail(self, value: str) -> None:
-        if self._detail_label is not None:
-            self._detail_label.value = f"detalhes: {value}"
-
-    def _set_save(self, value: str) -> None:
-        if self._save_label is not None:
-            self._save_label.value = f"salvar:   {value}"
-
-    def _show_help(self) -> None:
-        if not self._manager:
-            return
-        self._manager.add(
-            ptg.Window(
-                "[bold]Uso CLI preservado[/]",
-                "python buscador_vagas/buscador.py --portal linkedin --keywords Python",
-                "",
-                "Todos os parametros da TUI estao disponiveis como argumentos CLI:",
-                "  --portal, --keywords, --location, --provider, --valid-count",
-                "  --jobs-per-proxy, --max-count, --threads, --timeout,",
-                "  --detail-timeout, --details-limit, --detail-threads,",
-                "  --max-jobs, --start, --show-jobs, --gd-cookie, --filters",
-                "  --jobs-output, --details-output",
-                "",
-                "Exemplo completo:",
-                "  python buscador_vagas/buscador.py \\",
-                "    --portal linkedin --keywords Python --location Brasil \\",
-                "    --valid-count 25 --timeout 15 --detail-timeout 15",
-                "",
-                "Portais disponiveis: linkedin, gupy, glassdoor",
-                "Providers: veja job_search/infrastructure/proxy/proxy_sources.py",
-                "",
-                ["Fechar", lambda *_: self._manager.remove(self._manager.focused) if self._manager else None],
-                width=self._tui_cfg.help_window_width,
-                box=self._tui_cfg.window_box,
-            ).center()
-        )
-
-    def _show_error(self, message: str) -> None:
-        if not self._manager:
-            return
-        self._manager.add(
-            ptg.Window(
-                "[red bold]Erro[/]",
-                message,
-                ["Fechar", lambda *_: self._manager.remove(self._manager.focused) if self._manager else None],
-                width=self._tui_cfg.error_window_width,
-                box=self._tui_cfg.window_box,
-            ).center()
-        )
+        line = self._formatter.format(event)
+        self._event_lines.append(line)
+        self._event_printer(line)
 
 
-def _section(title: str) -> ptg.Label:
-    return ptg.Label(f"[bold 210]{title}[/]")
-
-
-class TuiInputReader:
-    def read(self, fields: dict[str, ptg.InputField]) -> TuiState:
-        return TuiState(
-            portal=_text(fields["portal"]),
-            keywords=_text(fields["keywords"]),
-            location=_text(fields["location"]),
-            location_id=_text(fields["location_id"]),
-            location_choice=_text(fields["location_choice"]),
-            work_type=_text(fields["work_type"]),
-            under_10_applicants=_bool(fields["under_10_applicants"]),
-            provider=_text(fields["provider"]),
-            valid_count=_int(fields["valid_count"]),
-            jobs_per_proxy=_int(fields["jobs_per_proxy"]),
-            max_count=_int(fields["max_count"]),
-            threads=_int(fields["threads"]),
-            timeout=_float(fields["timeout"]),
-            detail_timeout=_float(fields["detail_timeout"]),
-            max_jobs=_int(fields["max_jobs"]),
-            start=_int(fields["start"]),
-            details_limit=_int(fields["details_limit"]),
-            detail_threads=_int(fields["detail_threads"]),
-            show_jobs=_int(fields["show_jobs"]),
-            gd_cookie=_text(fields["gd_cookie"]),
-            filters_path=_text(fields["filters_path"]),
-            jobs_output=_text(fields["jobs_output"]),
-            details_output=_text(fields["details_output"]),
-            redis_url=_text(fields["redis_url"]),
-            events_channel=_text(fields["events_channel"]),
-        )
-
-
-def _text(field: ptg.InputField) -> str:
-    return str(field.value).strip()
-
-
-def _int(field: ptg.InputField) -> int:
-    raw = _text(field)
-    return int(raw) if raw else 0
-
-
-def _float(field: ptg.InputField) -> float:
-    raw = _text(field)
-    return float(raw) if raw else 0.0
-
-
-def _bool(field: ptg.InputField) -> bool:
-    raw = _text(field).casefold()
-    if not raw:
-        return False
-    if raw in {"1", "true", "sim", "s", "yes", "y"}:
-        return True
-    if raw in {"0", "false", "nao", "não", "n", "no"}:
-        return False
-    raise ValueError(f"booleano invalido: {raw}")
-
-
-def _build_ptg_config(tui_cfg) -> str:
-    import yaml
-    return yaml.safe_dump(tui_cfg.pytermgui_config.value, default_flow_style=False)
+def _default_first(values: Sequence[Choice], default: str) -> Sequence[Choice]:
+    selected = [item for item in values if item[0] == default]
+    rest = [item for item in values if item[0] != default]
+    return selected + rest

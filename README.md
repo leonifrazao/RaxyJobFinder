@@ -11,7 +11,7 @@ Raxy consulta LinkedIn, Gupy e Glassdoor em paralelo, rotaciona proxies automati
 ### pip (recomendado)
 
 ```bash
-pip install botasaurus dependency-injector beautifulsoup4 requests urllib3 rich pytermgui PyYAML loguru redis
+pip install botasaurus dependency-injector beautifulsoup4 requests urllib3 rich prompt_toolkit PyYAML loguru redis
 pip install /caminho/para/proxy_framework/
 pip install -e .
 ```
@@ -634,14 +634,16 @@ Os arquivos JSON são salvos em um schema canônico estável. Campos internos es
 
 ## TUI
 
-Raxy também oferece uma interface TUI interativa com PyTermGUI:
+Raxy também oferece uma interface TUI interativa com prompt_toolkit:
 
 ```bash
 # Abre a interface gráfica no terminal
 python buscador_vagas/buscador.py
 ```
 
-A TUI exibe um formulário completo com todos os parâmetros de busca, status em tempo real (proxy, busca, detalhes, salvar) via Redis pub/sub, botões para executar/limpar/ajudar, e popups de erro/ajuda.
+A TUI exige um `config.yaml` no diretório atual antes de abrir. Configurações técnicas, como provider de proxy, limites, timeouts, caminhos de saída e Redis, vêm desse arquivo; o termo de busca não deve ser configurado em `defaults.keywords`, porque ele é informado a cada busca.
+
+A TUI guia a busca em etapas com seletores para valores fechados, como portal e modalidade do LinkedIn, e campos textuais apenas onde há entrada livre. O status em tempo real é exibido via eventos Redis/pub-sub durante proxy, busca, detalhes e salvamento.
 
 Para usar com Redis, as variáveis `RAXY_REDIS_URL` e `RAXY_REDIS_CHANNEL` são repassadas automaticamente ao container ao iniciar a busca pela TUI.
 

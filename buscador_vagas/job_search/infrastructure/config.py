@@ -68,18 +68,8 @@ class LoggingConfig:
 
 
 @dataclass
-class PytermguiConfig:
-    value: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass
 class TuiConfig:
-    window_width: int = 84
-    window_box: str = "DOUBLE"
-    window_title: str = "[210 bold]Raxy TUI"
-    help_window_width: int = 76
-    error_window_width: int = 60
-    pytermgui_config: PytermguiConfig = field(default_factory=PytermguiConfig)
+    title: str = "Raxy Job Finder"
 
 
 @dataclass
@@ -134,7 +124,16 @@ def _from_dict(cls: type, data: dict) -> Any:
 def _load_config_from_yaml(path: str | Path) -> dict:
     import yaml
     with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return yaml.safe_load(f) or {}
+
+
+def _validate_yaml_config(data: dict) -> None:
+    defaults = data.get("defaults")
+    if isinstance(defaults, dict) and "keywords" in defaults:
+        raise ValueError(
+            "defaults.keywords nao e aceito em config.yaml; "
+            "informe o termo de busca na CLI, SDK ou TUI."
+        )
 
 
 def _apply_env_overrides(data: dict) -> dict:
@@ -163,7 +162,7 @@ DEFAULT_YAML_PATHS = [
 ]
 
 
-def _find_config(path: str | None = None) -> Path | None:
+def find_config_path(path: str | None = None) -> Path | None:
     if path:
         p = Path(path)
         if p.exists():
@@ -173,6 +172,10 @@ def _find_config(path: str | None = None) -> Path | None:
         if p.exists():
             return p
     return None
+
+
+def _find_config(path: str | None = None) -> Path | None:
+    return find_config_path(path)
 
 
 def _yaml_to_flat_dict(data: dict, prefix: str = "") -> dict:
@@ -199,6 +202,7 @@ def load_settings(path: str | None = None, *, reload: bool = False) -> RaxySetti
     if config_path:
         yaml_data = _load_config_from_yaml(config_path)
         yaml_data = _dasherize_keys(yaml_data)
+        _validate_yaml_config(yaml_data)
         base = _deep_merge(base, yaml_data)
 
     base = _apply_env_overrides(base)
@@ -259,18 +263,7 @@ def _default_dict() -> dict:
         },
         "portals": ["linkedin", "gupy", "glassdoor"],
         "tui": {
-            "window_width": 84,
-            "window_box": "DOUBLE",
-            "window_title": "[210 bold]Raxy TUI",
-            "help_window_width": 76,
-            "error_window_width": 60,
-            "pytermgui_config": {
-                "config": {
-                    "Label": {"styles": {"value": "dim bold"}},
-                    "InputField": {"styles": {"prompt": "dim italic", "cursor": "@72"}},
-                    "Window": {"styles": {"border": "60", "corner": "60"}},
-                }
-            },
+            "title": "Raxy Job Finder",
         },
     }
 

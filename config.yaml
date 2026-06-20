@@ -1,6 +1,5 @@
 defaults:
   portal: linkedin
-  keywords: "Vagas"
   location: "Brasil"
   valid_count: 25
   jobs_per_proxy: 5
@@ -90,21 +89,4 @@ portals:
   - glassdoor
 
 tui:
-  window_width: 84
-  window_box: DOUBLE
-  window_title: "[210 bold]Raxy TUI"
-  help_window_width: 76
-  error_window_width: 60
-  pytermgui_config:
-    config:
-      Label:
-        styles:
-          value: dim bold
-      InputField:
-        styles:
-          prompt: dim italic
-          cursor: '@72'
-      Window:
-        styles:
-          border: '60'
-          corner: '60'
+  title: "Raxy Job Finder"

@@ -3,443 +3,200 @@ from __future__ import annotations
 import os
 from unittest.mock import MagicMock
 
-import pytermgui as ptg
 import pytest
 
-from job_search.interfaces.tui.tui_app import TuiApp, _float, _int, _section, _text
+from job_search.infrastructure.config import reset_settings
+from job_search.interfaces.tui.tui_app import TuiApp, _default_first
 from job_search.interfaces.tui.tui_state import TuiState
 
 
-class FakeField:
-    def __init__(self, value: str) -> None:
-        self.value = value
+class FakePrompter:
+    def __init__(self, *, selects=None, texts=None, confirms=None) -> None:
+        self.selects = list(selects or [])
+        self.texts = list(texts or [])
+        self.confirms = list(confirms or [])
+        self.messages: list[tuple[str, str]] = []
+        self.select_calls = []
+        self.text_calls = []
+        self.confirm_calls = []
+
+    def select(self, title, text, values, default):
+        self.select_calls.append((title, text, list(values), default))
+        return self.selects.pop(0)
+
+    def text(self, title, text, default=""):
+        self.text_calls.append((title, text, default))
+        if self.texts:
+            return self.texts.pop(0)
+        return default
+
+    def confirm(self, title, text, default=False):
+        self.confirm_calls.append((title, text, default))
+        if self.confirms:
+            return self.confirms.pop(0)
+        return default
+
+    def message(self, title, text):
+        self.messages.append((title, text))
 
 
-class SettableField:
-    def __init__(self, value: str) -> None:
-        self._value = value
+class FakeSubscriber:
+    def __init__(self) -> None:
+        self.listen_calls = []
 
-    @property
-    def value(self) -> str:
-        return self._value
+    def listen(self, stop_event, handler):
+        self.listen_calls.append((stop_event, handler))
 
-    @value.setter
-    def value(self, v: str) -> None:
-        self._value = v
+
+@pytest.fixture(autouse=True)
+def reset_config_cache():
+    reset_settings()
+    yield
+    reset_settings()
+
+
+def write_config(tmp_path):
+    path = tmp_path / "config.yaml"
+    path.write_text("defaults:\n  portal: linkedin\n", encoding="utf-8")
+    return path
 
 
 class TestHelpers:
-    def test_text_strips_value(self):
-        field = FakeField("  linkedin  ")
-        assert _text(field) == "linkedin"
+    def test_default_first_moves_default_to_front(self):
+        values = [("gupy", "Gupy"), ("linkedin", "LinkedIn")]
 
-    def test_text_empty(self):
-        field = FakeField("")
-        assert _text(field) == ""
+        result = _default_first(values, "linkedin")
 
-    def test_text_not_string(self):
-        field = FakeField("123")
-        assert _text(field) == "123"
+        assert result == [("linkedin", "LinkedIn"), ("gupy", "Gupy")]
 
-    def test_int_parses_valid(self):
-        field = FakeField("42")
-        assert _int(field) == 42
+class TestTuiAppPromptState:
+    def test_prompt_state_uses_selectors_for_portal_and_work_type(self):
+        prompter = FakePrompter(selects=["linkedin", "remote"], confirms=[True])
+        app = TuiApp(prompter=prompter)
 
-    def test_int_empty_returns_zero(self):
-        field = FakeField("")
-        assert _int(field) == 0
+        state = app._prompt_state(TuiState(provider="united-states"))
 
-    def test_int_strips_whitespace(self):
-        field = FakeField("  99  ")
-        assert _int(field) == 99
+        assert state is not None
+        assert state.portal == "linkedin"
+        assert state.provider == "united-states"
+        assert state.work_type == "remote"
+        assert state.under_10_applicants is True
+        portal_values = prompter.select_calls[0][2]
+        assert [value for value, _ in portal_values] == ["linkedin", "gupy", "glassdoor"]
+        assert len(prompter.select_calls) == 2
 
-    def test_float_parses_valid(self):
-        field = FakeField("15.5")
-        assert _float(field) == 15.5
+    def test_prompt_state_skips_linkedin_only_options_for_gupy(self):
+        prompter = FakePrompter(selects=["gupy"])
+        app = TuiApp(prompter=prompter)
 
-    def test_float_empty_returns_zero(self):
-        field = FakeField("")
-        assert _float(field) == 0.0
+        state = app._prompt_state(TuiState())
 
-    def test_float_strips_whitespace(self):
-        field = FakeField("  7.5  ")
-        assert _float(field) == 7.5
+        assert state is not None
+        assert state.portal == "gupy"
+        assert state.work_type == "normal"
+        assert state.under_10_applicants is False
+        assert len(prompter.select_calls) == 1
+        assert prompter.confirm_calls == []
 
-    def test_section_returns_label(self):
-        label = _section("PROXY")
-        assert isinstance(label, ptg.Label)
+    def test_prompt_state_asks_glassdoor_cookie_only_for_glassdoor(self):
+        texts = ["Python", "Brasil", "", "1", "cookie=value", ""]
+        prompter = FakePrompter(selects=["glassdoor"], texts=texts)
+        app = TuiApp(prompter=prompter)
+
+        state = app._prompt_state(TuiState())
+
+        assert state is not None
+        assert state.portal == "glassdoor"
+        assert state.gd_cookie == "cookie=value"
+
+    def test_prompt_state_cancel_returns_none(self):
+        prompter = FakePrompter(selects=[None])
+        app = TuiApp(prompter=prompter)
+
+        assert app._prompt_state(TuiState()) is None
+
+    def test_prompt_state_text_cancel_shows_message_and_returns_none(self):
+        prompter = FakePrompter(selects=["gupy"], texts=[None])
+        app = TuiApp(prompter=prompter)
+
+        assert app._prompt_state(TuiState()) is None
+        assert prompter.messages[-1][0] == "Valor invalido"
 
 
-class TestTuiApp:
-    def test_initial_state(self):
-        app = TuiApp()
-        assert app._search_started is False
-        assert app._manager is None
-        assert app._fields == {}
-        assert app._proxy_label is None
-        assert app._search_label is None
-        assert app._detail_label is None
-        assert app._save_label is None
-        assert app._runner is not None
-        assert app._reader is not None
+class TestTuiAppRun:
+    def test_run_executes_runner_and_sets_env(self, tmp_path):
+        runner = MagicMock()
+        runner.run.return_value = 0
+        prompter = FakePrompter(selects=["gupy"])
+        app = TuiApp(runner=runner, prompter=prompter, config_path=write_config(tmp_path))
+        app._start_event_listener = MagicMock()
+        app._stop_event_listener = MagicMock()
 
-    def test_build_fields_creates_all_inputs(self):
-        app = TuiApp()
-        state = TuiState(portal="gupy", keywords="Java", location="RJ")
-        fields = app._build_fields(state)
-
-        assert fields["portal"].value == "gupy"
-        assert fields["keywords"].value == "Java"
-        assert fields["location"].value == "RJ"
-        assert fields["valid_count"].value == "25"
-        assert fields["work_type"].value == "normal"
-        assert fields["under_10_applicants"].value == "False"
-        assert fields["timeout"].value == "15.0"
-        assert fields["redis_url"].value is not None
-        assert fields["events_channel"].value is not None
-        assert len(fields) == 25
-
-    def test_build_fields_includes_all_keys(self):
-        app = TuiApp()
-        keys = app._build_fields(TuiState()).keys()
-        expected = {
-            "portal", "keywords", "location", "location_id", "location_choice",
-            "work_type", "under_10_applicants", "provider", "valid_count", "jobs_per_proxy", "max_count", "threads",
-            "timeout", "detail_timeout", "max_jobs", "start", "details_limit",
-            "detail_threads", "show_jobs", "gd_cookie", "filters_path",
-            "jobs_output", "details_output", "redis_url", "events_channel",
-        }
-        assert keys == expected
-
-    def test_build_fields_prompt_overwrites_defaults(self):
-        app = TuiApp()
-        fields = app._build_fields(TuiState(portal="glassdoor"))
-        assert fields["portal"].value == "glassdoor"
-
-    def test_set_proxy_updates_label(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._set_proxy("[green]OK[/]")
-        assert app._proxy_label.value == "proxy:    [green]OK[/]"
-
-    def test_set_proxy_skips_when_none(self):
-        app = TuiApp()
-        app._proxy_label = None
-        app._set_proxy("x")
-
-    def test_set_search_updates_label(self):
-        app = TuiApp()
-        app._search_label = MagicMock()
-        app._set_search("[red]falha[/]")
-        assert app._search_label.value == "busca:    [red]falha[/]"
-
-    def test_set_detail_updates_label(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._set_detail("[yellow]processando...[/]")
-        assert app._detail_label.value == "detalhes: [yellow]processando...[/]"
-
-    def test_set_save_updates_label(self):
-        app = TuiApp()
-        app._save_label = MagicMock()
-        app._set_save("[green]salvo[/]")
-        assert app._save_label.value == "salvar:   [green]salvo[/]"
-
-    def test_set_methods_update_independently(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._search_label = MagicMock()
-        app._detail_label = MagicMock()
-        app._save_label = MagicMock()
-        app._set_proxy("p")
-        app._set_search("s")
-        app._set_detail("d")
-        app._set_save("v")
-        assert app._proxy_label.value == "proxy:    p"
-        assert app._search_label.value == "busca:    s"
-        assert app._detail_label.value == "detalhes: d"
-        assert app._save_label.value == "salvar:   v"
-
-    def test_handle_event_proxy_prepare_started(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_prepare_started"})
-        assert app._proxy_label.value == "proxy:    [yellow]baixando proxies...[/]"
-
-    def test_handle_event_proxy_testing(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_testing"})
-        assert app._proxy_label.value == "proxy:    [yellow]testando proxies...[/]"
-
-    def test_handle_event_proxy_tested(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_tested", "payload": {"working": 5, "total": 10}})
-        assert app._proxy_label.value == "proxy:    [green]5/10 OK[/], [yellow]iniciando bridges...[/]"
-
-    def test_handle_event_proxy_tested_zero_defaults(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_tested"})
-        assert app._proxy_label.value == "proxy:    [green]0/0 OK[/], [yellow]iniciando bridges...[/]"
-
-    def test_handle_event_proxy_verifying(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_verifying"})
-        assert app._proxy_label.value == "proxy:    [yellow]verificando bridges...[/]"
-
-    def test_handle_event_proxy_bridge_verified(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_bridge_verified", "payload": {"index": 3, "total": 5}})
-        assert app._proxy_label.value == "proxy:    [green]bridge 3/5 OK[/]"
-
-    def test_handle_event_proxy_bridge_failed(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_bridge_failed", "payload": {"index": 2, "total": 5}})
-        assert app._proxy_label.value == "proxy:    [red]bridge 2/5 falhou[/]"
-
-    def test_handle_event_proxy_no_working(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_no_working"})
-        assert app._proxy_label.value == "proxy:    [red]nenhuma proxy funcional![/]"
-
-    def test_handle_event_proxy_prepare_finished(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._handle_event({"name": "proxy_prepare_finished", "payload": {"bridges": 8}})
-        assert app._proxy_label.value == "proxy:    [green]8 bridges ativas[/]"
-
-    def test_handle_event_search_bridge_attempt(self):
-        app = TuiApp()
-        app._search_label = MagicMock()
-        app._handle_event({"name": "search_bridge_attempt"})
-        assert app._search_label.value == "busca:    [yellow]buscando vagas...[/]"
-
-    def test_handle_event_search_bridge_succeeded(self):
-        app = TuiApp()
-        app._search_label = MagicMock()
-        app._handle_event({"name": "search_bridge_succeeded", "payload": {"jobs_count": 42, "status_code": 200}})
-        assert app._search_label.value == "busca:    [green]42 vagas encontradas[/] (HTTP 200)"
-
-    def test_handle_event_search_bridge_succeeded_defaults(self):
-        app = TuiApp()
-        app._search_label = MagicMock()
-        app._handle_event({"name": "search_bridge_succeeded"})
-        assert app._search_label.value == "busca:    [green]0 vagas encontradas[/] (HTTP 0)"
-
-    def test_handle_event_search_bridge_failed(self):
-        app = TuiApp()
-        app._search_label = MagicMock()
-        app._handle_event({"name": "search_bridge_failed"})
-        assert app._search_label.value == "busca:    [red]falha na busca[/]"
-
-    def test_handle_event_detail_started(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "detail_started", "payload": {"total": 20}})
-        assert app._detail_label.value == "detalhes: [yellow]detalhando 0/20...[/]"
-        assert app._detail_total == 20
-
-    def test_handle_event_detail_started_default_total(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "detail_started"})
-        assert app._detail_label.value == "detalhes: [yellow]detalhando 0/0...[/]"
-        assert app._detail_total == 0
-
-    def test_handle_event_detail_progress(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "detail_progress", "payload": {"done": 10, "total": 20, "ok": 8}})
-        assert app._detail_label.value == "detalhes: [yellow]10/20[/] ([green]8 OK[/])"
-
-    def test_handle_event_detail_progress_defaults(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "detail_progress"})
-        assert app._detail_label.value == "detalhes: [yellow]0/0[/] ([green]0 OK[/])"
-
-    def test_handle_event_detail_failed(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "detail_failed", "message": "timeout"})
-        assert app._detail_label.value == "detalhes: [red]timeout[/]"
-
-    def test_handle_event_detail_failed_empty_message(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "detail_failed"})
-        assert app._detail_label.value == "detalhes: [red][/]"
-
-    def test_handle_event_save_started(self):
-        app = TuiApp()
-        app._save_label = MagicMock()
-        app._handle_event({"name": "save_started"})
-        assert app._save_label.value == "salvar:   [yellow]salvando vagas...[/]"
-
-    def test_handle_event_save_details_started(self):
-        app = TuiApp()
-        app._save_label = MagicMock()
-        app._handle_event({"name": "save_details_started"})
-        assert app._save_label.value == "salvar:   [yellow]salvando detalhes...[/]"
-
-    def test_handle_event_save_finished(self):
-        app = TuiApp()
-        app._save_label = MagicMock()
-        app._handle_event({"name": "save_finished"})
-        assert app._save_label.value == "salvar:   [green]resultados salvos[/]"
-
-    def test_handle_event_job_search_finished(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "job_search_finished", "payload": {"jobs_detailed": 15}})
-        assert app._detail_label.value == "detalhes: [green]15 vagas detalhadas[/]"
-
-    def test_handle_event_job_search_finished_defaults(self):
-        app = TuiApp()
-        app._detail_label = MagicMock()
-        app._handle_event({"name": "job_search_finished"})
-        assert app._detail_label.value == "detalhes: [green]0 vagas detalhadas[/]"
-
-    def test_handle_event_unknown_does_nothing(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._search_label = MagicMock()
-        app._detail_label = MagicMock()
-        app._save_label = MagicMock()
-        original = app._proxy_label.value
-        app._handle_event({"name": "unknown_event"})
-        assert app._proxy_label.value is original
-
-    def test_handle_event_empty_name_does_nothing(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        original = app._proxy_label.value
-        app._handle_event({})
-        assert app._proxy_label.value is original
-
-    def test_reset_status_resets_all_labels(self):
-        app = TuiApp()
-        app._proxy_label = MagicMock()
-        app._search_label = MagicMock()
-        app._detail_label = MagicMock()
-        app._save_label = MagicMock()
-        app._reset_status()
-        assert app._proxy_label.value == "proxy:    [dim]aguardando...[/]"
-        assert app._search_label.value == "busca:    [dim]aguardando...[/]"
-        assert app._detail_label.value == "detalhes: [dim]aguardando...[/]"
-        assert app._save_label.value == "salvar:   [dim]aguardando...[/]"
-
-    def test_reset_fields_restores_defaults(self):
-        app = TuiApp()
-        app._fields = app._build_fields(TuiState(portal="gupy", keywords="Java"))
-        keys = list(app._fields.keys())
-        for k in keys:
-            app._fields[k] = SettableField(app._fields[k].value)
-        app._reset_fields()
-        defaults = TuiState.from_config()
-        assert app._fields["portal"].value == defaults.portal
-        assert app._fields["keywords"].value == defaults.keywords
-        assert app._fields["valid_count"].value == str(defaults.valid_count)
-        assert app._fields["timeout"].value == str(defaults.timeout)
-
-    def test_reset_fields_skips_missing_keys(self):
-        app = TuiApp()
-        app._fields = {"portal": SettableField("gupy")}
-        app._reset_fields()
-        assert app._fields["portal"].value == "linkedin"
-
-    def test_submit_ignored_when_search_started(self):
-        app = TuiApp()
-        app._search_started = True
-        app._reader = MagicMock()
-        app._submit()
-        app._reader.read.assert_not_called()
-
-    def test_submit_shows_error_on_invalid_input(self):
-        app = TuiApp()
-        app._show_error = MagicMock()
-        app._fields = app._build_fields(TuiState())
-        app._fields["valid_count"] = FakeField("not_a_number")
-        app._submit()
-        app._show_error.assert_called_once()
-
-    def test_submit_sets_env_and_starts(self, monkeypatch):
-        threads = []
-
-        class FakeThread:
-            def __init__(self, target=None, args=None, daemon=False) -> None:
-                self._target = target
-                self._args = args
-                self.daemon = daemon
-
-            def start(self) -> None:
-                threads.append(self)
-
-        monkeypatch.setattr("job_search.interfaces.tui.tui_app.threading.Thread", FakeThread)
-        app = TuiApp()
-        app._fields = app._build_fields(TuiState(portal="gupy"))
-        app._submit()
-        assert app._search_started is True
-        assert os.environ.get("RAXY_REDIS_URL") is not None
-
-    def test_show_error_does_nothing_without_manager(self):
-        app = TuiApp()
-        app._manager = None
-        app._show_error("error")
-
-    def test_show_help_does_nothing_without_manager(self):
-        app = TuiApp()
-        app._manager = None
-        app._show_help()
-
-    def test_run_returns_zero(self):
-        app = TuiApp()
-        app._run_window = MagicMock()
         result = app.run()
+
         assert result == 0
-        app._run_window.assert_called_once()
+        runner.run.assert_called_once()
+        state = runner.run.call_args.args[0]
+        assert state.portal == "gupy"
+        assert os.environ["RAXY_REDIS_URL"] == state.redis_url
+        assert os.environ["RAXY_REDIS_CHANNEL"] == state.events_channel
+        assert prompter.messages[-1][0] == "Busca finalizada"
+        app._stop_event_listener.assert_called_once()
 
+    def test_run_returns_zero_when_cancelled(self, tmp_path):
+        runner = MagicMock()
+        prompter = FakePrompter(selects=[None])
+        app = TuiApp(runner=runner, prompter=prompter, config_path=write_config(tmp_path))
+
+        assert app.run() == 0
+        runner.run.assert_not_called()
+
+    def test_run_reports_backend_error(self, tmp_path):
+        runner = MagicMock()
+        runner.run.side_effect = RuntimeError("boom")
+        prompter = FakePrompter(selects=["gupy"])
+        app = TuiApp(runner=runner, prompter=prompter, config_path=write_config(tmp_path))
+        app._start_event_listener = MagicMock()
+        app._stop_event_listener = MagicMock()
+
+        assert app.run() == 1
+        assert prompter.messages[-1] == ("Erro na busca", "boom")
+
+    def test_run_requires_config_file(self, tmp_path):
+        runner = MagicMock()
+        prompter = FakePrompter()
+        app = TuiApp(runner=runner, prompter=prompter, config_path=tmp_path / "missing.yaml")
+
+        assert app.run() == 1
+        runner.run.assert_not_called()
+        assert prompter.messages[-1][0] == "Config obrigatorio"
+
+
+class TestTuiAppEvents:
     def test_start_event_listener_uses_factory_and_stores_lifecycle(self, monkeypatch):
-        created = {}
+        subscriber = FakeSubscriber()
         started = []
-
-        class FakeSubscriber:
-            def listen(self, stop_event, handler):
-                created["stop_event"] = stop_event
-                created["handler"] = handler
 
         class FakeThread:
             def __init__(self, target, args, daemon=False) -> None:
-                self._target = target
-                self._args = args
+                self.target = target
+                self.args = args
                 self.daemon = daemon
 
-            def start(self) -> None:
+            def start(self):
                 started.append(self)
 
-            def join(self, timeout=None) -> None:
+            def join(self, timeout=None):
                 pass
 
-        def factory(redis_url: str, channel: str):
-            created["redis_url"] = redis_url
-            created["channel"] = channel
-            return FakeSubscriber()
-
         monkeypatch.setattr("job_search.interfaces.tui.tui_app.threading.Thread", FakeThread)
-        app = TuiApp(subscriber_factory=factory)
-        state = TuiState(redis_url="redis://test", events_channel="events")
-        app._start_event_listener(state)
+        app = TuiApp(subscriber_factory=lambda redis_url, channel: subscriber)
 
-        assert created["redis_url"] == "redis://test"
-        assert created["channel"] == "events"
+        app._start_event_listener(TuiState(redis_url="redis://test", events_channel="events"))
+
         assert app._event_stop_event is not None
         assert app._event_thread is started[0]
+        assert started[0].args[1] == app._handle_event
 
     def test_stop_event_listener_sets_event_and_joins_thread(self):
         app = TuiApp()
@@ -455,44 +212,12 @@ class TestTuiApp:
         assert app._event_stop_event is None
         assert app._event_thread is None
 
-    def test_start_search_runs_and_resets_flag(self, monkeypatch):
-        threads_started = []
+    def test_handle_event_formats_and_prints(self):
+        printed = []
+        app = TuiApp(event_printer=printed.append)
 
-        class TrackingThread:
-            def __init__(self, target, daemon=False) -> None:
-                self._target = target
+        app._handle_event({"name": "search_bridge_succeeded", "payload": {"jobs_count": 2}})
 
-            def start(self) -> None:
-                threads_started.append(self)
-                self._target()
-
-        monkeypatch.setattr("job_search.interfaces.tui.tui_app.threading.Thread", TrackingThread)
-        app = TuiApp()
-        app._runner = MagicMock()
-        app._runner.run.return_value = 0
-        state = TuiState()
-        app._start_search(state)
-        app._runner.run.assert_called_once_with(state)
-        assert app._search_started is False
-
-    def test_start_search_sets_labels_on_failure(self, monkeypatch):
-        class ImmediateThread:
-            def __init__(self, target, daemon=False) -> None:
-                self._target = target
-
-            def start(self) -> None:
-                self._target()
-
-        monkeypatch.setattr("job_search.interfaces.tui.tui_app.threading.Thread", ImmediateThread)
-        app = TuiApp()
-        app._runner = MagicMock()
-        app._runner.run.side_effect = RuntimeError("boom")
-        app._proxy_label = MagicMock()
-        app._search_label = MagicMock()
-        app._detail_label = MagicMock()
-        app._save_label = MagicMock()
-        app._start_search(TuiState())
-        assert app._proxy_label.value == "proxy:    [red]falha[/]"
-        assert app._search_label.value == "busca:    [red]falha[/]"
-        assert app._detail_label.value == "detalhes: [red]falha[/]"
-        assert app._save_label.value == "salvar:   [red]falha[/]"
+        assert len(app._event_lines) == 1
+        assert printed == app._event_lines
+        assert "2 vagas" in printed[0]

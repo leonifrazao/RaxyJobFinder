@@ -6,6 +6,7 @@ let
     requests
     urllib3
     rich
+    prompt-toolkit
   ]);
 
   xrayPackages =
@@ -31,11 +32,11 @@ pkgs.mkShell {
     export PATH="$VIRTUAL_ENV/bin:$PATH"
     VENV_PYTHON="$VIRTUAL_ENV/bin/python"
 
-    "$VENV_PYTHON" - <<'PY' >/dev/null 2>&1 || "$VENV_PYTHON" -m pip install --upgrade botasaurus dependency-injector beautifulsoup4 pytermgui PyYAML loguru redis
+    "$VENV_PYTHON" - <<'PY' >/dev/null 2>&1 || "$VENV_PYTHON" -m pip install --upgrade botasaurus dependency-injector beautifulsoup4 prompt_toolkit PyYAML loguru redis
 import botasaurus
 import dependency_injector
 import bs4
-import pytermgui
+import prompt_toolkit
 import yaml
 import loguru
 import redis
@@ -59,9 +60,9 @@ import dependency_injector
 print(getattr(dependency_injector, '__version__', 'installed'))
 PY
 )"
-    echo "PyTermGUI: $("$VENV_PYTHON" - <<'PY'
-import pytermgui
-print(getattr(pytermgui, '__version__', 'installed'))
+    echo "Prompt Toolkit: $("$VENV_PYTHON" - <<'PY'
+import prompt_toolkit
+print(getattr(prompt_toolkit, '__version__', 'installed'))
 PY
 )"
     echo "Loguru: $("$VENV_PYTHON" - <<'PY'
