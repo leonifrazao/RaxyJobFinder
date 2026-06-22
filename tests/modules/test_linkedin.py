@@ -120,6 +120,21 @@ class TestBuildSearchUrl:
         url = adapter.build_search_url(q)
         assert "f_EA" not in url
 
+    def test_recent_period_month_filter(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", recent_period="month")
+        url = adapter.build_search_url(q)
+        assert "f_TPR=r2592000" in url
+
+    def test_recent_period_alias_24h_filter(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", recent_period="24h")
+        url = adapter.build_search_url(q)
+        assert "f_TPR=r86400" in url
+
+    def test_recent_period_any_omits_filter(self, adapter: LinkedInJobBoardAdapter):
+        q = SearchQuery(keywords="python", location="Estados Unidos", recent_period="any")
+        url = adapter.build_search_url(q)
+        assert "f_TPR" not in url
+
 
 class TestJobIdFromUrn:
     def test_valid_urn(self):
@@ -183,6 +198,11 @@ class TestBuildSeeMoreUrl:
         query = SearchQuery(keywords="python", location="Estados Unidos", under_10_applicants=True)
         url = adapter._build_see_more_url(query, 60)
         assert "f_EA=true" in url
+
+    def test_includes_recent_period_filter(self, adapter: LinkedInJobBoardAdapter):
+        query = SearchQuery(keywords="python", location="Estados Unidos", recent_period="week")
+        url = adapter._build_see_more_url(query, 60)
+        assert "f_TPR=r604800" in url
 
 
 class TestParseJobsFromHtml:

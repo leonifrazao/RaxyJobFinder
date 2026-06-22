@@ -63,6 +63,25 @@ LINKEDIN_WORK_TYPE_CODES = {
     "híbrido": "3",
 }
 
+LINKEDIN_RECENT_PERIOD_CODES = {
+    "any": None,
+    "all": None,
+    "todos": None,
+    "day": "r86400",
+    "24h": "r86400",
+    "last-24h": "r86400",
+    "ultimas-24h": "r86400",
+    "últimas-24h": "r86400",
+    "week": "r604800",
+    "last-week": "r604800",
+    "ultima-semana": "r604800",
+    "última-semana": "r604800",
+    "month": "r2592000",
+    "last-month": "r2592000",
+    "ultimo-mes": "r2592000",
+    "último-mês": "r2592000",
+}
+
 
 class LinkedInJobBoardAdapter:
     name = "linkedin"
@@ -83,6 +102,9 @@ class LinkedInJobBoardAdapter:
         work_type_code = self._work_type_code(query.work_type)
         if work_type_code:
             params["f_WT"] = work_type_code
+        recent_period_code = self._recent_period_code(query.recent_period)
+        if recent_period_code:
+            params["f_TPR"] = recent_period_code
         self._apply_under_10_applicants_filter(params, query.under_10_applicants)
         return f"{LINKEDIN_SEARCH_BASE_URL}?{urlencode(params)}"
 
@@ -98,6 +120,9 @@ class LinkedInJobBoardAdapter:
         work_type_code = self._work_type_code(query.work_type)
         if work_type_code:
             params["f_WT"] = work_type_code
+        recent_period_code = self._recent_period_code(query.recent_period)
+        if recent_period_code:
+            params["f_TPR"] = recent_period_code
         self._apply_under_10_applicants_filter(params, query.under_10_applicants)
         return f"{LINKEDIN_SEE_MORE_API_URL}?{urlencode(params)}"
 
@@ -112,6 +137,12 @@ class LinkedInJobBoardAdapter:
         if not work_type:
             return None
         return LINKEDIN_WORK_TYPE_CODES.get(work_type.strip().casefold())
+
+    @staticmethod
+    def _recent_period_code(recent_period: str | None) -> str | None:
+        if not recent_period:
+            return None
+        return LINKEDIN_RECENT_PERIOD_CODES.get(recent_period.strip().casefold())
 
     def get_location_options(self, bridge_url: str, location_query: str, timeout: float) -> list[LocationOption]:
         headers = self._headers(accept="*/*")

@@ -27,6 +27,7 @@ class DefaultsConfig:
     location_choice: str = "1"
     work_type: str = "normal"
     under_10_applicants: bool = False
+    recent_period: str = "any"
     suppress_client_errors: bool = False
     close_on_crash: bool = True
 
@@ -225,6 +226,7 @@ def _default_dict() -> dict:
             "detail_threads": 5, "show_jobs": 10, "silent": True,
             "gd_cookie": "", "filters_path": "", "location_id": "",
             "location_choice": "1", "work_type": "normal", "under_10_applicants": False,
+            "recent_period": "any",
             "suppress_client_errors": False,
             "close_on_crash": True,
         },

@@ -21,6 +21,7 @@ class TuiSearchRunner:
             location_choice=location_choice,
             work_type=state.work_type.strip() or None,
             under_10_applicants=state.under_10_applicants,
+            recent_period=state.recent_period.strip() or None,
             proxy_provider=state.provider,
             valid_count=state.valid_count,
             jobs_per_proxy=state.jobs_per_proxy,

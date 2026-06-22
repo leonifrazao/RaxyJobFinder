@@ -12,9 +12,18 @@ class TestTuiSearchRunner:
             finder = job_finder.return_value
             finder.search.return_value = []
 
-            result = TuiSearchRunner().run(TuiState(work_type="hybrid", under_10_applicants=True, jobs_output="jobs.json", details_output="details.json"))
+            result = TuiSearchRunner().run(
+                TuiState(
+                    work_type="hybrid",
+                    under_10_applicants=True,
+                    recent_period="month",
+                    jobs_output="jobs.json",
+                    details_output="details.json",
+                )
+            )
 
         assert result == 0
         assert job_finder.call_args.kwargs["work_type"] == "hybrid"
         assert job_finder.call_args.kwargs["under_10_applicants"] is True
+        assert job_finder.call_args.kwargs["recent_period"] == "month"
         finder.search.assert_called_once_with(jobs_output="jobs.json", details_output="details.json")

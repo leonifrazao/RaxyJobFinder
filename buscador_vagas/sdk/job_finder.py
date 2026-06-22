@@ -27,6 +27,7 @@ class JobFinder:
         location_choice: int | None = None,
         work_type: str | None = None,
         under_10_applicants: bool | None = None,
+        recent_period: str | None = None,
         proxy_sources: list[str] | None = None,
         proxy_provider: str | None = None,
         valid_count: int | None = None,
@@ -60,6 +61,7 @@ class JobFinder:
         location_choice = location_choice or cfg.location_choice or None
         work_type = work_type or cfg.work_type or None
         under_10_applicants = under_10_applicants if under_10_applicants is not None else cfg.under_10_applicants
+        recent_period = recent_period or cfg.recent_period or "any"
         proxy_provider = proxy_provider or DEFAULT_PROVIDER
         valid_count = valid_count if valid_count is not None else cfg.valid_count
         jobs_per_proxy = jobs_per_proxy if jobs_per_proxy is not None else cfg.jobs_per_proxy
@@ -91,6 +93,7 @@ class JobFinder:
         self._location_choice = location_choice
         self._work_type = work_type
         self._under_10_applicants = under_10_applicants
+        self._recent_period = recent_period
         self._valid_count = valid_count
         self._jobs_per_proxy = jobs_per_proxy
         self._max_count = max_count
@@ -184,6 +187,7 @@ class JobFinder:
             location_choice=self._location_choice,
             work_type=self._work_type,
             under_10_applicants=self._under_10_applicants,
+            recent_period=self._recent_period,
             valid_count=self._valid_count,
             jobs_per_proxy=self._jobs_per_proxy,
             max_count=self._max_count,

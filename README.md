@@ -163,6 +163,7 @@ Use `job.to_dict()` para serializar em dicionário (útil para JSON).
 | `location_choice` | `None` | Índice 1-based no typeahead |
 | `work_type` | `"normal"` | Modelo de trabalho, exclusivo do LinkedIn: `normal`, `remote`/`remoto` ou `hybrid`/`hibrido`/`híbrido` |
 | `under_10_applicants` | `False` | `True` para filtrar vagas do LinkedIn com menos de 10 candidaturas |
+| `recent_period` | `"any"` | Periodo de publicacao, exclusivo do LinkedIn: `any`, `day`/`24h`, `week` ou `month` |
 | `proxy_sources` | `None` | Lista de URLs/arquivos de proxy |
 | `proxy_provider` | `"united-states"` | `brazil`, `united-states`, `canada`, etc. |
 | `valid_count` | `25` | Bridges no pool |
@@ -261,6 +262,18 @@ python buscador_vagas/buscador.py --portal linkedin --under-10-applicants
 ```
 
 Quando `--under-10-applicants` é usado, o Raxy envia `f_EA=true` na URL do LinkedIn. Se esse filtro for usado na Gupy ou no Glassdoor, a busca é recusada.
+
+### Vagas recentes no LinkedIn
+
+Use `--recent-period` para filtrar vagas por periodo de publicacao no LinkedIn. Sem filtro, use `any`.
+
+```bash
+python buscador_vagas/buscador.py --portal linkedin --recent-period month
+python buscador_vagas/buscador.py --portal linkedin --recent-period week
+python buscador_vagas/buscador.py --portal linkedin --recent-period 24h
+```
+
+O Raxy envia `f_TPR=r2592000` para ultimo mes, `f_TPR=r604800` para ultima semana e `f_TPR=r86400` para ultimas 24h. No SDK, use `JobFinder(recent_period="month")`, `"week"` ou `"day"`.
 
 ### Requisitos extraídos
 
@@ -511,6 +524,17 @@ Filtro booleano de candidaturas, exclusivo do LinkedIn. Por padrão fica desliga
 --under-10-applicants  # adiciona f_EA=true
 ```
 
+### `--recent-period`
+
+Periodo de publicacao, exclusivo do LinkedIn. Padrão: `any`.
+
+```
+--recent-period any       # não aplica filtro de data
+--recent-period month     # ultimo mes; f_TPR=r2592000
+--recent-period week      # ultima semana; f_TPR=r604800
+--recent-period day       # ultimas 24h; aceita também 24h
+```
+
 ### `--proxy-source`
 
 URL ou caminho local para uma lista manual de proxies. Pode repetir a flag para múltiplas fontes.
@@ -653,7 +677,7 @@ python buscador_vagas/buscador.py
 
 A TUI exige um `config.yaml` no diretório atual antes de abrir. Configurações técnicas, como provider de proxy, limites, timeouts, caminhos de saída e Redis, vêm desse arquivo; o termo de busca não deve ser configurado em `defaults.keywords`, porque ele é informado a cada busca.
 
-A TUI guia a busca em etapas com seletores para valores fechados, como portal e modalidade do LinkedIn, e campos textuais apenas onde há entrada livre. O status em tempo real é exibido via eventos Redis/pub-sub durante proxy, busca, detalhes e salvamento.
+A TUI guia a busca em etapas com seletores para valores fechados, como portal, modalidade do LinkedIn e periodo de vagas recentes, e campos textuais apenas onde há entrada livre. O status em tempo real é exibido via eventos Redis/pub-sub durante proxy, busca, detalhes e salvamento.
 
 Para usar com Redis, as variáveis `RAXY_REDIS_URL` e `RAXY_REDIS_CHANNEL` são repassadas automaticamente ao container ao iniciar a busca pela TUI.
 

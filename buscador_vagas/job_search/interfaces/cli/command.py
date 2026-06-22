@@ -42,6 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="LinkedIn: filtra vagas com menos de 10 candidaturas",
     )
+    parser.add_argument(
+        "--recent-period",
+        choices=["any", "day", "week", "month", "24h", "ultima-semana", "ultimo-mes"],
+        default="any",
+        help="LinkedIn: filtra vagas recentes; day/24h, week/ultima-semana ou month/ultimo-mes",
+    )
     parser.add_argument("--valid-count", type=int, default=25, help="quantidade de proxies/bridges funcionais para manter no pool")
     parser.add_argument("--jobs-per-proxy", type=int, default=5, help="quantidade de detalhes de vagas por proxy antes de rotacionar")
     parser.add_argument("--max-count", type=int, default=177, help="quantidade maxima de configs para carregar")
@@ -89,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         location_choice=args.location_choice,
         work_type=args.work_type,
         under_10_applicants=args.under_10_applicants,
+        recent_period=args.recent_period,
         valid_count=args.valid_count,
         jobs_per_proxy=args.jobs_per_proxy,
         max_count=args.max_count,

@@ -129,6 +129,21 @@ class TestBuildParser:
         args = parser.parse_args(["--under-10-applicants"])
         assert args.under_10_applicants is True
 
+    def test_default_recent_period(self):
+        parser = build_parser()
+        args = parser.parse_args([])
+        assert args.recent_period == "any"
+
+    def test_recent_period(self):
+        parser = build_parser()
+        args = parser.parse_args(["--recent-period", "week"])
+        assert args.recent_period == "week"
+
+    def test_recent_period_accepts_portuguese_alias(self):
+        parser = build_parser()
+        args = parser.parse_args(["--recent-period", "ultimo-mes"])
+        assert args.recent_period == "ultimo-mes"
+
     def test_valid_count(self):
         parser = build_parser()
         args = parser.parse_args(["--valid-count", "10"])

@@ -106,6 +106,7 @@ class TuiApp:
 
         work_type = "normal"
         under_10_applicants = False
+        recent_period = "any"
         if portal == "linkedin":
             selected_work_type = self._prompter.select(
                 "Modelo de trabalho",
@@ -128,6 +129,20 @@ class TuiApp:
             if under_10 is None:
                 return None
             under_10_applicants = under_10
+            selected_recent_period = self._prompter.select(
+                "Vagas recentes",
+                "Periodo de publicacao no LinkedIn.",
+                [
+                    ("any", "Qualquer periodo"),
+                    ("day", "Ultimas 24h"),
+                    ("week", "Ultima semana"),
+                    ("month", "Ultimo mes"),
+                ],
+                defaults.recent_period,
+            )
+            if selected_recent_period is None:
+                return None
+            recent_period = selected_recent_period
 
         filter_by_keywords = self._prompter.confirm(
             "Filtro por keyword",
@@ -151,6 +166,7 @@ class TuiApp:
                 max_jobs=self._prompt_int("Vagas", "Quantas vagas voce quer?", defaults.max_jobs),
                 work_type=work_type,
                 under_10_applicants=under_10_applicants,
+                recent_period=recent_period,
                 provider=defaults.provider,
                 valid_count=defaults.valid_count,
                 jobs_per_proxy=defaults.jobs_per_proxy,

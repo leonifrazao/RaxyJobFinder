@@ -17,6 +17,7 @@ class TestTuiState:
         assert state.location_choice == "1"
         assert state.work_type == "normal"
         assert state.under_10_applicants is False
+        assert state.recent_period == "any"
         assert state.valid_count == 25
         assert state.jobs_per_proxy == 5
         assert state.max_count == 177
@@ -44,6 +45,7 @@ class TestTuiState:
         assert state.location == cfg.location
         assert state.work_type == cfg.work_type
         assert state.under_10_applicants == cfg.under_10_applicants
+        assert state.recent_period == cfg.recent_period
         assert state.valid_count == cfg.valid_count
         assert state.jobs_per_proxy == cfg.jobs_per_proxy
         assert state.max_count == cfg.max_count
@@ -81,6 +83,7 @@ class TestTuiState:
         assert "location" in field_names
         assert "work_type" in field_names
         assert "under_10_applicants" in field_names
+        assert "recent_period" in field_names
         assert "valid_count" in field_names
         assert "timeout" in field_names
         assert "redis_url" in field_names

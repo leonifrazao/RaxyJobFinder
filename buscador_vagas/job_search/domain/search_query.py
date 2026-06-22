@@ -13,10 +13,18 @@ class SearchQuery:
     location_id: str | None = None
     work_type: str | None = None
     under_10_applicants: bool = False
+    recent_period: str | None = None
 
     def __post_init__(self) -> None:
         if not clean_text(self.keywords):
             raise ValueError("keywords are required")
 
     def with_location(self, location: LocationOption) -> "SearchQuery":
-        return SearchQuery(self.keywords, location.name, location.id, self.work_type, self.under_10_applicants)
+        return SearchQuery(
+            self.keywords,
+            location.name,
+            location.id,
+            self.work_type,
+            self.under_10_applicants,
+            self.recent_period,
+        )

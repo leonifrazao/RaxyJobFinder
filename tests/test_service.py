@@ -267,6 +267,12 @@ class TestJobSearchService:
         with pytest.raises(ValueError, match="LinkedIn"):
             service.run(request)
 
+    def test_rejects_recent_period_outside_linkedin(self, service, sample_request):
+        request = replace(sample_request, recent_period="week")
+
+        with pytest.raises(ValueError, match="LinkedIn"):
+            service.run(request)
+
     def test_prepare_bridges(self, service, mock_proxy_pool, sample_request):
         query = SearchQuery("Python", "Brasil")
         bridges = service._prepare_bridges(query, sample_request)
@@ -382,6 +388,7 @@ class TestJobSearchRequest:
             detail_threads=5, filters_path=None, details_limit=0, show_jobs=10,
             location_id=None, location_choice=None,
         )
+        assert req.recent_period is None
         assert req.filter_by_keywords is False
 
     def test_default_max_jobs(self):

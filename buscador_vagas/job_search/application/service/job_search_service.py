@@ -71,6 +71,7 @@ class JobSearchService(JobSearchUseCase):
             request.location_id,
             request.work_type,
             request.under_10_applicants,
+            request.recent_period,
         )
         bridges = self._prepare_bridges(query, request)
         try:
@@ -106,6 +107,8 @@ class JobSearchService(JobSearchUseCase):
             raise ValueError("A modalidade (--work-type) so pode ser escolhida no LinkedIn.")
         if request.under_10_applicants:
             raise ValueError("O filtro de candidaturas so pode ser usado no LinkedIn.")
+        if request.recent_period and request.recent_period.strip().casefold() not in {"any", "all", "todos"}:
+            raise ValueError("O filtro de vagas recentes so pode ser usado no LinkedIn.")
 
     def _finish_without_working_bridge(self, log: Any) -> int:
         log.warning("job_search_no_working_bridge")

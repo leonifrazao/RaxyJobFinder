@@ -244,6 +244,14 @@ class TestJobFinder:
         request = mock_service.run.call_args[0][0]
         assert request.under_10_applicants is True
 
+    def test_recent_period_passed_through(self, mock_deps):
+        _, mock_service = mock_deps
+        finder = JobFinder(recent_period="month")
+        finder.search()
+
+        request = mock_service.run.call_args[0][0]
+        assert request.recent_period == "month"
+
     def test_filters_path_string_in_init(self, mock_deps):
         _, mock_service = mock_deps
         finder = JobFinder(filters="filters/python.json")

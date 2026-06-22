@@ -71,7 +71,7 @@ class TestHelpers:
 
 class TestTuiAppPromptState:
     def test_prompt_state_uses_selectors_for_portal_and_work_type(self):
-        prompter = FakePrompter(selects=["linkedin", "remote"], confirms=[True])
+        prompter = FakePrompter(selects=["linkedin", "remote", "week"], confirms=[True])
         app = TuiApp(prompter=prompter)
 
         state = app._prompt_state(TuiState(provider="united-states"))
@@ -81,9 +81,10 @@ class TestTuiAppPromptState:
         assert state.provider == "united-states"
         assert state.work_type == "remote"
         assert state.under_10_applicants is True
+        assert state.recent_period == "week"
         portal_values = prompter.select_calls[0][2]
         assert [value for value, _ in portal_values] == ["linkedin", "gupy", "glassdoor"]
-        assert len(prompter.select_calls) == 2
+        assert len(prompter.select_calls) == 3
 
     def test_prompt_state_skips_linkedin_only_options_for_gupy(self):
         prompter = FakePrompter(selects=["gupy"])

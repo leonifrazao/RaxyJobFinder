@@ -26,4 +26,5 @@ class JobSearchRequest:
     detail_threads: int = 5
     work_type: str | None = None
     under_10_applicants: bool = False
+    recent_period: str | None = None
     filter_by_keywords: bool = False
