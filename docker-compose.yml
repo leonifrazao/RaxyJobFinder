@@ -1,0 +1,42 @@
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      RAXY_REDIS_URL: "redis://redis:6379/0"
+      RAXY_REDIS_CHANNEL: "raxy:events"
+      RAXY_REDIS_DATA_CHANNEL: "vagas:disponiveis"
+      XRAY_PATH: "/usr/local/bin/xray"
+    volumes:
+      - ./output:/app/output          # JSONs gerados ficam aqui
+      - ./proxy_cache.json:/app/proxy_cache.json  # cache de proxies testados
+    depends_on:
+      redis:
+        condition: service_healthy
+  ui:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./ui:/usr/share/nginx/html:ro
+    
+volumes:
+  redis_data:

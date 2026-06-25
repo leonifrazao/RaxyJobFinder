@@ -5,7 +5,7 @@ proxy_cache.json
 /output/
 error_logs/
 logs/
-*.html
+
 /build/
 /scrapper_linkedin.egg-info/
 /.codebase-memory/

@@ -1,42 +1,59 @@
+# Stage 1 - Xray
 FROM python:3.13-slim AS xray
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates unzip \
+ARG XRAY_VERSION=1.8.11
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    unzip \
+    ca-certificates \
+    && curl -fsSL \
+    "https://github.com/XTLS/Xray-core/releases/download/v${XRAY_VERSION}/Xray-linux-64.zip" \
+    -o /tmp/xray.zip \
+    && unzip /tmp/xray.zip -d /usr/local/bin \
+    && chmod +x /usr/local/bin/xray \
+    && rm /tmp/xray.zip \
+    && apt-get purge -y curl unzip \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -L https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip -o /tmp/xray.zip \
-    && unzip /tmp/xray.zip -d /opt/xray \
-    && rm /tmp/xray.zip \
-    && chmod +x /opt/xray/xray
-
+# Stage 2 - App
 FROM python:3.13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ca-certificates \
-        libstdc++6 \
-        redis-server \
+    ca-certificates \
+    libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=xray /opt/xray /opt/xray
-ENV XRAY_PATH=/opt/xray/xray
+# Xray
+COPY --from=xray /usr/local/bin/xray /usr/local/bin/xray
+ENV XRAY_PATH=/usr/local/bin/xray
 
 WORKDIR /app
 
-COPY proxy_framework proxy_framework
+# Proxy framework / SDK
+COPY proxy_framework /app/proxy_framework
 RUN pip install --no-cache-dir /app/proxy_framework
 
-COPY buscador_vagas buscador_vagas
-COPY pyproject.toml .
+# API requirements
+COPY api/requirements.txt /app/api/requirements.txt
+RUN pip install --no-cache-dir -r /app/api/requirements.txt
+
+COPY . /app
+
+# Instala projeto principal
 RUN pip install --no-cache-dir -e .
 
-# Pre-download botasaurus native library (hrequests-cgo .so) — bypass GitHub API rate limit
-RUN python -c "import urllib.request, os; url='https://github.com/daijro/hrequests/releases/download/v0.8.0-beta.2/hrequests-cgo-2.0-linux-amd64.so'; dest='/usr/local/lib/python3.13/site-packages/botasaurus_requests/bin/hrequests-cgo-2.0-linux-amd64.so'; os.makedirs(os.path.dirname(dest), exist_ok=True); urllib.request.urlretrieve(url, dest); print('Native lib OK:', os.path.getsize(dest), 'bytes')"
+RUN python -c "import urllib.request, os; \
+url='https://github.com/daijro/hrequests/releases/download/v0.8.0-beta.2/hrequests-cgo-2.0-linux-amd64.so'; \
+dest='/usr/local/lib/python3.13/site-packages/botasaurus_requests/bin/hrequests-cgo-2.0-linux-amd64.so'; \
+os.makedirs(os.path.dirname(dest), exist_ok=True); \
+urllib.request.urlretrieve(url, dest)"
 
-ENV PYTHONPATH=/app/proxy_framework:/app/buscador_vagas
+ENV PYTHONPATH=/app/proxy_framework:/app
+ENV OUTPUT_PATH=/app/output
 
-RUN echo '#!/bin/sh' > /entrypoint.sh && \
-    echo 'redis-server --daemonize yes' >> /entrypoint.sh && \
-    echo 'exec python /app/buscador_vagas/buscador.py "$@"' >> /entrypoint.sh && \
-    chmod +x /entrypoint.sh
+RUN mkdir -p /app/output
 
-WORKDIR /app
-ENTRYPOINT ["/entrypoint.sh"]
+EXPOSE 8000
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

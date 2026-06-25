@@ -1,0 +1,17 @@
+# RaxyJobFinder API — dependências
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+redis[asyncio]>=5.0.0
+pydantic>=2.7.0
+
+# Dependências do SDK do RaxyJobFinder (instalar antes via: pip install -e /app/raxy)
+# As dependências abaixo são as mesmas do pyproject.toml
+botasaurus
+dependency-injector
+beautifulsoup4
+requests
+urllib3
+rich
+prompt_toolkit
+PyYAML
+loguru
