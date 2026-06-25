@@ -437,6 +437,26 @@ class TestFetchJobDetails:
             adapter.fetch_job_details("http://bridge:8080", job, "", 10.0)
 
 
+class TestDetectWorkType:
+    def test_detects_explicit_presencial_before_remote_mentions(self):
+        trabalho, remoto = LinkedInJobBoardAdapter._detect_work_type(
+            "Desenvolvedor Full Stack",
+            "Vaga presencial - Porto Alegre/RS. Sem trabalho remoto.",
+        )
+
+        assert trabalho == "Presencial"
+        assert remoto == "Nao"
+
+    def test_detects_hybrid_before_presencial(self):
+        trabalho, remoto = LinkedInJobBoardAdapter._detect_work_type(
+            "Desenvolvedor Full Stack",
+            "Modelo híbrido com presencial 2x por semana.",
+        )
+
+        assert trabalho == "Hibrido"
+        assert remoto == "Nao"
+
+
 class TestCleanText:
     def test_none_returns_empty(self):
         assert LinkedInJobBoardAdapter._clean_text(None) == ""

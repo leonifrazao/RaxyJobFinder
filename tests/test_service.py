@@ -239,6 +239,25 @@ class TestJobSearchService:
 
         assert result[0].to_dict()["modalidade"] == "remoto"
 
+    def test_with_modalidade_prefers_presencial_criteria_over_remote_filter(self, service):
+        posting = JobPosting(
+            summary=JobSummary("linkedin", "e1", "Dev"),
+            details=JobDetails(criteria={"Trabalho": "Presencial", "Remoto": "Nao"}),
+        )
+
+        result = service._with_modalidade([posting], "remote")
+
+        assert result[0].to_dict()["modalidade"] == "presencial"
+
+    def test_with_modalidade_infers_presencial_from_location_over_remote_filter(self, service):
+        posting = JobPosting(
+            summary=JobSummary("linkedin", "e1", "Dev", location="Porto Alegre, RS presencial"),
+        )
+
+        result = service._with_modalidade([posting], "remote")
+
+        assert result[0].to_dict()["modalidade"] == "presencial"
+
     @pytest.mark.parametrize(
         ("work_type", "expected"),
         [

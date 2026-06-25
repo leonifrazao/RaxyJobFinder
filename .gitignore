@@ -12,3 +12,4 @@ logs/
 /dump.rdb
 /out.json
 /path
+.agents/

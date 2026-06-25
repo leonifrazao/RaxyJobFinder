@@ -382,10 +382,12 @@ class LinkedInJobBoardAdapter:
     @staticmethod
     def _detect_work_type(title: str, description: str) -> tuple[str, str]:
         text = f"{title} {description}"
-        if _REMOTE_PATTERN.search(text):
-            return "Remoto", "Sim"
         if _HYBRID_PATTERN.search(text):
             return "Hibrido", "Nao"
+        if _PRESENCIAL_PATTERN.search(text):
+            return "Presencial", "Nao"
+        if _REMOTE_PATTERN.search(text):
+            return "Remoto", "Sim"
         return "Presencial", "Nao"
 
     @staticmethod

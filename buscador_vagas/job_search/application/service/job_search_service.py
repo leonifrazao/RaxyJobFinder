@@ -253,6 +253,8 @@ class JobSearchService(JobSearchUseCase):
             return None
         if any(token in value for token in ("hybrid", "hibrido", "híbrido")):
             return "híbrido"
+        if any(token in value for token in ("presencial", "on-site", "onsite", "escritório", "escritorio")):
+            return "presencial"
         if any(token in value for token in ("remote", "remoto", "home office", "teletrabalho")):
             return "remoto"
         return None
