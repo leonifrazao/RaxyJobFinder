@@ -869,8 +869,8 @@
           <div class="field">
             <label>Detalhes: máx. <span id="detailsLimitVal">20</span></label>
             <div class="range-row">
-              <input type="range" min="0" max="100" step="1" value="20" id="detailsLimit"
-                oninput="document.getElementById('detailsLimitVal').textContent=this.value;updateCmd()" />
+              <input type="range" min="1" max="101" step="1" value="20" id="detailsLimit"
+                oninput="syncDetailsLimit();updateCmd()" />
               <span class="range-val" id="dlOut">20</span>
             </div>
           </div>
@@ -1064,6 +1064,21 @@
   const val     = id => document.getElementById(id).value.trim();
   const checked = id => document.getElementById(id).checked;
 
+  function detailsLimitValue() {
+    const value = parseInt(document.getElementById('detailsLimit').value, 10);
+    return value > 100 ? 0 : value;
+  }
+
+  function formatDetailsLimit() {
+    return detailsLimitValue() === 0 ? 'Ilimitado' : String(detailsLimitValue());
+  }
+
+  function syncDetailsLimit() {
+    const text = formatDetailsLimit();
+    document.getElementById('detailsLimitVal').textContent = text;
+    document.getElementById('dlOut').textContent = text;
+  }
+
   /* ─── Preview CLI ────────────────────────────────────────────── */
   function updateCmd() {
     const parts = ['python buscador_vagas/buscador.py'];
@@ -1082,8 +1097,8 @@
     if (checked('filterByKw')) parts.push('--filter-by-keywords');
     const mj = parseInt(val('maxJobs')); if (mj > 0) parts.push(`--max-jobs ${mj}`);
     const st = parseInt(val('startOffset')); if (st > 0) parts.push(`--start ${st}`);
-    const dl = document.getElementById('detailsLimit').value;
-    if (parseInt(dl) !== 20) parts.push(`--details-limit ${dl}`);
+    const dl = detailsLimitValue();
+    if (dl !== 20) parts.push(`--details-limit ${dl}`);
     const pp = val('proxyProvider'); if (pp && pp !== 'united-states') parts.push(`--provider ${pp}`);
     const ps = val('proxySource'); if (ps) parts.push(`--proxy-source "${ps}"`);
     const vc = val('validCount'); if (vc && parseInt(vc) !== 25) parts.push(`--valid-count ${vc}`);
@@ -1124,7 +1139,7 @@
       detail_timeout:       parseFloat(val('detailTimeout'))|| 15,
       max_jobs:             parseInt(val('maxJobs'))        || 0,
       start:                parseInt(val('startOffset'))    || 0,
-      details_limit:        parseInt(document.getElementById('detailsLimit').value) || 20,
+      details_limit:        detailsLimitValue(),
       gd_cookie:            val('gdCookie') || '',
     };
   }
@@ -1477,6 +1492,7 @@
   }
 
   /* ─── Init ───────────────────────────────────────────────────── */
+  syncDetailsLimit();
   updateCmd();
 </script>
 </body>

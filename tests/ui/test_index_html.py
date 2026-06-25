@@ -89,3 +89,13 @@ def test_ui_exposes_supported_portals():
     assert "setPortal('linkedin'" in html
     assert "setPortal('gupy'" in html
     assert "setPortal('glassdoor'" in html
+
+
+def test_details_limit_uses_unlimited_above_100():
+    html = read_ui()
+
+    assert 'id="detailsLimit"' in html
+    assert 'min="1" max="101"' in html
+    assert "value > 100 ? 0 : value" in html
+    assert "'Ilimitado'" in html
+    assert "details_limit:        detailsLimitValue()" in html
