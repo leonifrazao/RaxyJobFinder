@@ -121,7 +121,7 @@ pip install -e .  # ou pip install buscador_vagas/
 from buscador_vagas import JobFinder
 
 finder = JobFinder(portal="linkedin", keywords="Python", location="São Paulo")
-jobs = finder.search()
+jobs = finder.search(max_jobs=180)  # pagina ate 180 vagas; 0 = so primeira pagina
 
 for job in jobs:
     print(job.summary.title, job.summary.company)
@@ -188,6 +188,8 @@ finder = JobFinder(
 jobs = finder.search(
     jobs_output="resultados/vagas.json",
     details_output="resultados/detalhadas.json",
+    max_jobs=180,        # override por chamada
+    details_limit=40,    # detalha ate 40; 0 = todas
 )
 ```
 

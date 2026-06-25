@@ -63,6 +63,42 @@ def test_search_returns_500_when_runner_fails(client, monkeypatch):
     assert response.json() == {"detail": "provider unavailable"}
 
 
+def test_run_search_passes_limits_to_sdk(monkeypatch, tmp_path):
+    calls = {}
+
+    class FakeJob:
+        def to_dict(self):
+            return {"title": "Python Developer"}
+
+    class FakeJobFinder:
+        def __init__(self, **kwargs):
+            calls["init"] = kwargs
+
+        def search(self, **kwargs):
+            calls["search"] = kwargs
+            return [FakeJob()]
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(api_main, "JobFinder", FakeJobFinder)
+
+    req = api_main.SearchRequest(
+        keywords="Python",
+        max_jobs=180,
+        details_limit=40,
+        start=60,
+        detail_threads=8,
+    )
+
+    result = api_main._run_search(req)
+
+    assert result == [{"title": "Python Developer"}]
+    assert calls["search"]["max_jobs"] == 180
+    assert calls["search"]["details_limit"] == 40
+    assert calls["search"]["start"] == 60
+    assert calls["search"]["detail_threads"] == 8
+    assert calls["init"]["keywords"] == "Python"
+
+
 def test_get_output_returns_saved_json(client, monkeypatch, tmp_path):
     output_dir = tmp_path / "output" / "linkedin"
     output_dir.mkdir(parents=True)

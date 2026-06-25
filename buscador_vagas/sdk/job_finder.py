@@ -159,6 +159,10 @@ class JobFinder:
         jobs_output: str | None = None,
         details_output: str | None = None,
         filters: JobFilterSet | str | None = None,
+        max_jobs: int | None = None,
+        details_limit: int | None = None,
+        start: int | None = None,
+        detail_threads: int | None = None,
     ) -> list[JobPosting]:
         from loguru import logger
 
@@ -197,11 +201,11 @@ class JobFinder:
             jobs_output=jobs_output,
             details_output=details_output,
             filters_path=effective_filters_path,
-            details_limit=self._details_limit,
+            details_limit=details_limit if details_limit is not None else self._details_limit,
             show_jobs=0,
-            start=self._start,
-            max_jobs=self._max_jobs,
-            detail_threads=self._detail_threads,
+            start=start if start is not None else self._start,
+            max_jobs=max_jobs if max_jobs is not None else self._max_jobs,
+            detail_threads=detail_threads if detail_threads is not None else self._detail_threads,
             filter_by_keywords=self._filter_by_keywords,
         )
 

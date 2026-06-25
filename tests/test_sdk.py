@@ -205,6 +205,17 @@ class TestJobFinder:
         assert request.jobs_output == "custom/jobs.json"
         assert request.details_output == "custom/details.json"
 
+    def test_search_overrides_pagination_params(self, mock_deps):
+        _, mock_service = mock_deps
+        finder = JobFinder(max_jobs=80, details_limit=10, start=0, detail_threads=2)
+        finder.search(max_jobs=180, details_limit=20, start=60, detail_threads=8)
+
+        request = mock_service.run.call_args[0][0]
+        assert request.max_jobs == 180
+        assert request.details_limit == 20
+        assert request.start == 60
+        assert request.detail_threads == 8
+
     def test_gd_cookie_passed_to_container(self, mock_deps):
         container, _ = mock_deps
         JobFinder(portal="glassdoor", gd_cookie="my-cookie")

@@ -103,10 +103,6 @@ def _run_search(req: SearchRequest) -> list[dict]:
         timeout=req.timeout,
         detail_timeout=req.detail_timeout,
         filters=filterset,
-        details_limit=req.details_limit,
-        start=req.start,
-        max_jobs=req.max_jobs,
-        detail_threads=req.detail_threads,
         gd_cookie=req.gd_cookie,
         filter_by_keywords=req.filter_by_keywords,
         silent=True,
@@ -115,6 +111,10 @@ def _run_search(req: SearchRequest) -> list[dict]:
     jobs = finder.search(
         jobs_output=jobs_out,
         details_output=details_out,
+        max_jobs=req.max_jobs,
+        details_limit=req.details_limit,
+        start=req.start,
+        detail_threads=req.detail_threads,
     )
 
     return [j.to_dict() for j in jobs]
