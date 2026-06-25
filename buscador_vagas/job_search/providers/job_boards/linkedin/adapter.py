@@ -14,6 +14,7 @@ from job_search.domain.job_details import JobDetails, extract_requisitos
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
 from job_search.domain.search_query import SearchQuery
+from job_search.infrastructure.config import load_settings
 
 _REMOTE_PATTERN = re.compile(
     r"(?:home\s*office|trabalhe?\s*(?:de\s*)?casa|work\s*(?:from\s*)?home|"
@@ -356,7 +357,10 @@ class LinkedInJobBoardAdapter:
             if field not in criteria:
                 criteria[field] = "N/A"
 
-        criteria["requisitos"] = extract_requisitos(description)
+        criteria["requisitos"] = extract_requisitos(
+            description,
+            load_settings().requirement_extraction.patterns,
+        )
 
         decorated_id_code = soup.select_one("#decoratedJobPostingId")
         reference_id_code = soup.select_one("#referenceId")

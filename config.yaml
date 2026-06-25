@@ -89,3 +89,208 @@ portals:
 
 tui:
   title: "Raxy Job Finder"
+
+requirement_extraction:
+  patterns:
+    - pattern: '\b(ensino|curso)\s*superior\b'
+      label: ensino_superior
+    - pattern: '\b(graduação|graduacao)\b'
+      label: graduacao
+    - pattern: '\bforma[cç][aã]o\s*(completa|superior)\b'
+      label: graduacao
+    - pattern: '\bp[oó]s[- ]?graduação\b|\bpos[- ]?graduacao\b'
+      label: pos_graduacao
+    - pattern: '\bmestrado\b'
+      label: mestrado
+    - pattern: '\bdoutorado\b'
+      label: doutorado
+    - pattern: '\b(ingl[eê]s|ingles)\s*(avançado|fluente|fluency|intermedi[áa]rio)\b'
+      label: ingles
+    - pattern: '\bespanhol\s*(avançado|fluente|intermedi[áa]rio)\b'
+      label: espanhol
+    - pattern: '\bexcel\b'
+      label: excel
+    - pattern: '\bpython\b'
+      label: python
+    - pattern: '\bsql\b'
+      label: sql
+    - pattern: '\bsas\b'
+      label: sas
+    - pattern: '\bdatabricks\b'
+      label: databricks
+    - pattern: '\bpyspark\b'
+      label: pyspark
+    - pattern: '\bspark\b'
+      label: spark
+    - pattern: '\bteradata\b'
+      label: teradata
+    - pattern: '\bariba\b'
+      label: ariba
+    - pattern: '\bpower\s*bi\b'
+      label: power_bi
+    - pattern: '\btableau\b'
+      label: tableau
+    - pattern: '\bpacote\s*office\b'
+      label: pacote_office
+    - pattern: '\bjavascript\b'
+      label: javascript
+    - pattern: '\btypescript\b'
+      label: typescript
+    - pattern: '\bjava\b(?!\s*script)'
+      label: java
+    - pattern: '\bc#\b|\bcsharp\b'
+      label: csharp
+    - pattern: '\br\b(?=\s*language)'
+      label: r
+    - pattern: '\bgoogle\s*(sheets|workspace|planilhas)\b'
+      label: google_workspace
+    - pattern: '\bcomunica[cç][aã]o\b'
+      label: comunicacao
+    - pattern: '\btrabalho\s*em\s*(equipe|time)\b'
+      label: trabalho_em_equipe
+    - pattern: '\bproatividade\b|\bproativo\b'
+      label: proatividade
+    - pattern: '\bracioc[ií]nio\s*l[oó]gico\b'
+      label: raciocinio_logico
+    - pattern: '\bperfil\s*anal[ií]tico\b|\bpensamento\s*anal[ií]tico\b'
+      label: perfil_analitico
+    - pattern: '\borganiza[cç][aã]o\b|\borganizado\b'
+      label: organizacao
+    - pattern: '\blideran[cç]a\b'
+      label: lideranca
+    - pattern: '\bcriatividade\b|\bcriativo\b'
+      label: criatividade
+    - pattern: '\bplanejamento\b'
+      label: planejamento
+    - pattern: '\bno[çc][õo]es?\s*de\s*l[oó]gica\s*de\s*programa[cç][aã]o\b'
+      label: logica_programacao
+    - pattern: '\bengenharia\s*de\s*dados\b'
+      label: engenharia_dados
+    - pattern: '\be[tl][tl]\b'
+      label: etl
+    - pattern: '\bintelig[êe]ncia\s*artificial\b'
+      label: inteligencia_artificial
+    - pattern: '\bmachine\s*learning\b|\baprendizado\s*de\s*m[aá]quina\b'
+      label: machine_learning
+    - pattern: '\bpower\s*automate\b|\brpa\b|\bautoma[cç][aã]o\b'
+      label: automacao
+    - pattern: '\bCI/CD\b|\bdevops\b|\bgit\b'
+      label: devops
+    - pattern: '\bdocker\b'
+      label: docker
+    - pattern: '\bkubernetes\b|\bk8s\b'
+      label: kubernetes
+    - pattern: '\baws\b|\bazure\b|\bgcp\b|\bgoogle\s*cloud\b|\bamazon\s*web\s*services\b'
+      label: cloud
+    - pattern: '\b[áa]gil\b|\bscrum\b|\bkanban\b'
+      label: metodologias_ageis
+    - pattern: '\bhtml\b'
+      label: html
+    - pattern: '\bcss\b'
+      label: css
+    - pattern: '\breact\b'
+      label: react
+    - pattern: '\bnode\.?js\b'
+      label: nodejs
+    - pattern: '\bapi\b|\brest\b'
+      label: api
+    - pattern: '\bcertifica[cç][aã]o\b|\bcertificado\b'
+      label: certificacao
+    - pattern: '\b[tT][iI]\b|tecnologia\s*da\s*informa[cç][aã]o'
+      label: ti
+    - pattern: '\b[dD]ados\b'
+      label: dados
+    - pattern: '\bfinan[cç]as\b|\bfinanceiro\b'
+      label: financas
+    - pattern: '\bcont[áa]bil\b|\bcontabilidade\b'
+      label: contabilidade
+    - pattern: '\bmarketing\b'
+      label: marketing
+    - pattern: '\bvendas\b|\bcomercial\b'
+      label: vendas
+    - pattern: '\batua[cç][aã]o\s*(cliente|externo)\b|\brelacionamento\s*com\s*cliente\b|\bclientes\b'
+      label: atendimento_cliente
+    - pattern: '\bnegocia[cç][aã]o\b'
+      label: negociacao
+    - pattern: '\ban[áa]lise\s*de\s*dados\b|\ban[áa]lise\s*dados\b'
+      label: analise_dados
+    - pattern: '\b(resolu[cç][aã]o|solu[cç][aã]o)\s*de\s*problemas\b|\bresolver\s*problemas\b'
+      label: resolucao_problemas
+    - pattern: '\baten[cç][aã]o\s*a\s*detalhes\b|\bdetalhes\b'
+      label: atencao_detalhes
+    - pattern: '\bautonomia\b|\btrabalho\s*aut[ôo]nomo\b'
+      label: autonomia
+    - pattern: '\bresponsabilidade\b|\brespons[áa]vel\b'
+      label: responsabilidade
+    - pattern: '\bfoco\s*em\s*resultados\b|\borienta[cç][aã]o\s*a\s*resultados\b|\bresultados\b'
+      label: foco_resultados
+    - pattern: '\bempreendedorismo\b|\bpensamento\s*criativo\b|\binova[cç][aã]o\b'
+      label: inovacao
+    - pattern: '\btomada\s*de\s*decis[aã]o\b'
+      label: tomada_decisao
+    - pattern: '\bgest[aã]o\s*de\s*tempo\b|\bprioriza[cç][aã]o\b'
+      label: gestao_tempo
+    - pattern: '\bword\b'
+      label: word
+    - pattern: '\bpowerpoint\b|\bppt\b'
+      label: powerpoint
+    - pattern: '\boutlook\b'
+      label: outlook
+    - pattern: '\bphotoshop\b|\billustrator\b|\bfigma\b'
+      label: design
+    - pattern: '\bsap\b'
+      label: sap
+    - pattern: '\boracle\b'
+      label: oracle
+    - pattern: '\bpostgres\b|\bpostgresql\b|\bmysql\b|\bmariadb\b|\bmongo(db)?\b|\bredis\b'
+      label: banco_dados
+    - pattern: '\bdjango\b|\bflask\b|\bfastapi\b'
+      label: framework_python
+    - pattern: '\bspring\b|\bspring\s*boot\b'
+      label: spring
+    - pattern: '\bwindows\s*server\b|\blinux\b|\bunix\b'
+      label: sistemas_operacionais
+    - pattern: '\bredes\s*neurais\b|\bdeep\s*learning\b|\bnlp\b|\bvis[aã]o\s*computacional\b'
+      label: deep_learning
+    - pattern: '\bseguran[cç]a\s*da\s*informa[cç][aã]o\b|\bciberseguran[cç]a\b|\bcyber\b'
+      label: ciberseguranca
+    - pattern: '\bregulatório\b|\bregulatorio\b|\bcompliance\b|\blgpd\b'
+      label: regulatorio
+    - pattern: '\bprazos?\s*(apertados?|curtos?)?\b'
+      label: gestao_prazos
+    - pattern: '\bDDD\b|\bdomain[- ]driven\s*design\b'
+      label: ddd
+    - pattern: '\bSOLID\b'
+      label: solid
+    - pattern: '\barquitetura\s*hexagonal\b|\bhexagonal\s*architecture\b|\bports\s*and\s*adapters\b'
+      label: arquitetura_hexagonal
+    - pattern: '\bclean\s*arch(itecture)?\b|\barquitetura\s*limpa\b'
+      label: clean_arch
+    - pattern: '\barquitetura\s*de\s*software\b|\bsoftware\s*architecture\b'
+      label: arquitetura_software
+    - pattern: '\bmodelagem\s*de\s*dados\b|\bdata\s*modeling\b'
+      label: modelagem_dados
+    - pattern: '\bpadr[õo]es?\s*de\s*projeto\b|\bdesign\s*patterns?\b'
+      label: design_patterns
+    - pattern: '\bCQRS\b|\bevent\s*sourcing\b'
+      label: cqrs_event_sourcing
+    - pattern: '\bmicrosservi[çc]os?\b|\bmicroservices?\b'
+      label: microservicos
+    - pattern: '\bapi\s*rest(ful)?\b|\bgraphql\b|\bgrpc\b'
+      label: api_rest
+    - pattern: '\bmessage\s*broker\b|\bfila\s*mensageria\b|\brabbitmq\b|\bkafka\b|\bsqs\b|\bsns\b|\bpub[- ]?sub\b'
+      label: mensageria
+    - pattern: '\bcontaineriza[cç][aã]o\b|\bcontainers?\b'
+      label: containerizacao
+    - pattern: '\borquestra[cç][aã]o\b|\borchestration\b'
+      label: orquestracao
+    - pattern: '\bmonitoramento\b|\bobservabilidade\b|\bprometheus\b|\bgrafana\b|\bdatadog\b|\bnew\s*relic\b|\bopentelemetry\b'
+      label: observabilidade
+    - pattern: '\bTDD\b|\btest[- ]driven\s*development\b|\bteste\s*unit[áa]rio\b|\bteste\s*de\s*integra[cç][aã]o\b'
+      label: testes
+    - pattern: '\b(integra[cç][aã]o\s*cont[ií]nua|continuous\s*integration|entrega\s*cont[ií]nua|continuous\s*delivery)\b'
+      label: ci_cd
+    - pattern: '\bdiagrama\s*de\s*classes?\b|\bUML\b|\bDER\b|\bdiagrama\s*entidade\s*relacionamento\b'
+      label: modelagem_uml
+    - pattern: '\blinguagem\s*de\s*programa[cç][aã]o\b'
+      label: linguagem_programacao

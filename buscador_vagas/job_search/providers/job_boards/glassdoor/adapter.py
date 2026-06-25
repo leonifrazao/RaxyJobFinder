@@ -11,6 +11,7 @@ from job_search.domain.job_details import JobDetails, extract_requisitos
 from job_search.domain.job_summary import JobSummary
 from job_search.domain.location_option import LocationOption
 from job_search.domain.search_query import SearchQuery
+from job_search.infrastructure.config import load_settings
 
 
 GLASSDOOR_BASE = "https://www.glassdoor.com.br"
@@ -337,7 +338,10 @@ class GlassdoorJobBoardAdapter:
         criteria["Cidade"] = city
         criteria["Estado"] = state
         criteria["Easy Apply"] = "Sim" if header.get("easyApply") else "Nao"
-        criteria["requisitos"] = extract_requisitos(desc)
+        criteria["requisitos"] = extract_requisitos(
+            desc,
+            load_settings().requirement_extraction.patterns,
+        )
 
         return JobDetails(
             title=header.get("jobTitleText", details.title),

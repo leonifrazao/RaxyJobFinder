@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, get_type_hints
@@ -76,6 +77,11 @@ class TuiConfig:
 
 
 @dataclass
+class RequirementExtractionConfig:
+    patterns: list[dict[str, str]] = field(default_factory=list)
+
+
+@dataclass
 class RaxySettings:
     defaults: DefaultsConfig = field(default_factory=DefaultsConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
@@ -84,6 +90,9 @@ class RaxySettings:
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     portals: tuple[str, ...] = ("linkedin", "gupy", "glassdoor")
     tui: TuiConfig = field(default_factory=TuiConfig)
+    requirement_extraction: RequirementExtractionConfig = field(
+        default_factory=RequirementExtractionConfig
+    )
 
 
 def _deep_merge(base: dict, override: dict) -> dict:
@@ -137,6 +146,25 @@ def _validate_yaml_config(data: dict) -> None:
             "defaults.keywords nao e aceito em config.yaml; "
             "informe o termo de busca na CLI, SDK ou TUI."
         )
+    requirement_extraction = data.get("requirement_extraction")
+    if not isinstance(requirement_extraction, dict):
+        return
+    patterns = requirement_extraction.get("patterns")
+    if patterns is None:
+        return
+    if not isinstance(patterns, list):
+        raise ValueError("requirement_extraction.patterns deve ser uma lista")
+    for index, item in enumerate(patterns):
+        if not isinstance(item, dict) or not item.get("pattern") or not item.get("label"):
+            raise ValueError(
+                f"requirement_extraction.patterns[{index}] deve conter pattern e label"
+            )
+        try:
+            re.compile(str(item["pattern"]))
+        except re.error as exc:
+            raise ValueError(
+                f"requirement_extraction.patterns[{index}].pattern invalido: {exc}"
+            ) from exc
 
 
 def _apply_env_overrides(data: dict) -> dict:
@@ -270,6 +298,9 @@ def _default_dict() -> dict:
         "portals": ["linkedin", "gupy", "glassdoor"],
         "tui": {
             "title": "Raxy Job Finder",
+        },
+        "requirement_extraction": {
+            "patterns": [],
         },
     }
 
