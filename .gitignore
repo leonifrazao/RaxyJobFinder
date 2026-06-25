@@ -13,3 +13,5 @@ logs/
 /out.json
 /path
 .agents/
+skills-lock.json
+.qwen
