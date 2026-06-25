@@ -25,7 +25,8 @@ jobs:
         run: |
           pip install .
           pip install -e ./proxy_framework
-          pip install pytest
+          pip install -r api/requirements.txt
+          pip install pytest httpx
 
       - name: Run tests
         env:

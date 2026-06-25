@@ -2,7 +2,7 @@
 
 **Buscador multicanal de vagas com rotação automática de proxies.**
 
-Raxy consulta LinkedIn, Gupy e Glassdoor em paralelo, rotaciona proxies automaticamente via bridges Xray/V2Ray, e aplica filtros inteligentes nas vagas encontradas — tudo por linha de comando.
+Raxy consulta LinkedIn, Gupy e Glassdoor em paralelo, rotaciona proxies automaticamente via bridges Xray/V2Ray, e aplica filtros inteligentes nas vagas encontradas — via CLI, SDK Python, API REST ou UI web.
 
 ---
 
@@ -51,6 +51,57 @@ python buscador_vagas/buscador.py --keywords "Python" --location "São Paulo"
 #   output/linkedin/vagas.json      — vagas básicas no schema canônico
 #   output/linkedin/detalhadas.json — vagas com descrição completa
 ```
+
+---
+
+## API REST e UI Web
+
+A API FastAPI expõe o SDK por HTTP e a UI web consome essa API em tempo real. O jeito mais simples de subir tudo é com Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Serviços:
+
+| Serviço | URL | Descrição |
+|---|---|---|
+| UI | `http://localhost:3000` | Interface web estática em `ui/index.html` |
+| API | `http://localhost:8000` | API REST/SSE FastAPI |
+| Docs | `http://localhost:8000/docs` | Swagger/OpenAPI automático |
+| Redis | `localhost:6379` | Pub/sub de eventos da busca |
+
+Endpoints principais:
+
+| Método | Rota | Uso |
+|---|---|---|
+| `GET` | `/health` | Status da API |
+| `POST` | `/search` | Busca síncrona; responde só no fim |
+| `POST` | `/search/stream` | Busca com eventos SSE em tempo real |
+| `GET` | `/output/{portal}?kind=detalhadas` | Lê último JSON salvo (`vagas` ou `detalhadas`) |
+
+Exemplo de busca pela API:
+
+```bash
+curl -X POST http://localhost:8000/search \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "portal": "linkedin",
+    "keywords": "Python",
+    "location": "São Paulo",
+    "details_limit": 10,
+    "max_jobs": 20
+  }'
+```
+
+Para rodar a API sem Docker Compose, mantenha Redis disponível e execute:
+
+```bash
+pip install -r api/requirements.txt
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+```
+
+A UI aponta por padrão para `http://localhost:8000` (`API_BASE` em `ui/index.html`). Se a API rodar em outro host/porta, ajuste esse valor.
 
 ---
 
@@ -782,5 +833,7 @@ ProxyFrameworkPool -----+       |
 | `job_search/interfaces/` | CLI, TUI, Console |
 | `job_search/providers/` | Adaptadores dos portais |
 | `sdk/` | API programática |
+| `api/` | API REST/SSE FastAPI |
+| `ui/` | UI web estática |
 
-Entrypoint: `buscador_vagas/buscador.py` → `launcher.py` → CLI (se args) ou TUI.
+Entrypoints: `buscador_vagas/buscador.py` → `launcher.py` → CLI (se args) ou TUI; `api.main:app` → API REST/SSE; `ui/index.html` → UI web.
