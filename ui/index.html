@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RaxyJobFinder</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --bg-surface: #161b22;
+    --bg-input: #0d1117;
+    --border: #30363d;
+    --border-focus: #58a6ff;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --text-dim: #484f58;
+    --accent: #58a6ff;
+    --accent-dim: #1f3558;
+    --green: #3fb950;
+    --green-dim: #12261e;
+    --amber: #d29922;
+    --amber-dim: #2e1f0a;
+    --red: #f85149;
+    --purple: #bc8cff;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    --radius: 6px;
+    --radius-lg: 10px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Layout */
+  .app {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: 56px 1fr;
+    grid-template-areas: "header header" "sidebar main";
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    grid-area: header;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #1f6feb, #388bfd);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .header-badge {
+    background: var(--green-dim);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 5px 12px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost:hover { background: var(--bg); color: var(--text); border-color: #6e7681; }
+
+  .btn-primary {
+    background: #1f6feb;
+    border: 1px solid #388bfd;
+    color: #fff;
+    padding: 7px 18px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary:hover { background: #388bfd; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Sidebar */
+  .sidebar {
+    grid-area: sidebar;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-inner {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Section */
+  .section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Form fields */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .field label {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .field input[type="text"],
+  .field input[type="number"],
+  .field select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    width: 100%;
+    transition: border-color 0.15s;
+    font-family: inherit;
+  }
+
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+  }
+
+  .field input::placeholder { color: var(--text-dim); }
+
+  /* Toggle row */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+  }
+
+  .toggle-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .toggle {
+    position: relative;
+    width: 34px;
+    height: 18px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track { background: #1f6feb; }
+
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: left 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track::after { left: 19px; }
+
+  /* Grid 2 cols */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Main */
+  .main {
+    grid-area: main;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Command preview */
+  .cmd-bar {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .cmd-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .cmd-code {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--green);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .btn-copy {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-copy:hover { color: var(--text); border-color: #6e7681; }
+  .btn-copy.copied { color: var(--green); border-color: var(--green); }
+
+  /* Results area */
+  .results-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* State: empty */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 40px;
+  }
+
+  .empty-icon {
+    font-size: 40px;
+    opacity: 0.4;
+  }
+
+  .empty-state h3 { font-size: 16px; color: var(--text-muted); font-weight: 500; }
+  .empty-state p { font-size: 13px; max-width: 320px; line-height: 1.6; }
+
+  /* Loading */
+  .loading-bar {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+  }
+
+  .loading-bar.active { display: flex; }
+
+  .progress-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    animation: progress 2s ease infinite;
+  }
+
+  @keyframes progress {
+    0% { width: 0%; margin-left: 0; }
+    50% { width: 70%; margin-left: 15%; }
+    100% { width: 0%; margin-left: 100%; }
+  }
+
+  .loading-status {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .loading-dot {
+    display: inline-block;
+    animation: blink 1.2s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+
+  /* Stats row */
+  .stats-row {
+    display: none;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .stats-row.visible { display: grid; }
+
+  .stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-num {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Filters bar */
+  .filters-bar {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+  }
+  .filters-bar.visible { display: flex; }
+
+  .filter-chip {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-chip:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+  .filter-chip.active { background: var(--accent); color: #fff; }
+
+  /* Date filter */
+  .date-filter-group {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    animation: slideDown 0.2s ease-out;
+  }
+  .date-filter-group.visible { display: flex; }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .date-filter-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .date-filter-input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    color-scheme: dark;
+  }
+
+  .date-filter-input:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.12);
+  }
+
+  .date-filter-sep {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .btn-date-clear {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-date-clear:hover { color: var(--red); border-color: var(--red); }
+
+  .date-filter-count {
+    font-size: 11px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    margin-left: auto;
+  }
+
+  /* Job card */
+  .job-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .job-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    border-radius: 3px 0 0 3px;
+  }
+
+  .job-card.linkedin::before { background: #0a66c2; }
+  .job-card.gupy::before { background: #7b2d8b; }
+  .job-card.glassdoor::before { background: #0caa41; }
+
+  .job-card:hover { border-color: #6e7681; transform: translateY(-1px); }
+
+  .job-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .job-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .job-company {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .job-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .meta-icon {
+    width: 14px;
+    height: 14px;
+    opacity: 0.6;
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+
+  .badge-remoto { background: var(--green-dim); color: var(--green); border: 1px solid color-mix(in srgb, var(--green) 25%, transparent); }
+  .badge-hibrido { background: var(--amber-dim); color: var(--amber); border: 1px solid color-mix(in srgb, var(--amber) 25%, transparent); }
+  .badge-presencial { background: #1c2128; color: var(--text-muted); border: 1px solid var(--border); }
+
+  .badge-portal {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-linkedin { background: #0d2038; color: #58a6ff; }
+  .badge-gupy { background: #1e0d2e; color: var(--purple); }
+  .badge-glassdoor { background: #0d2119; color: var(--green); }
+
+  .job-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-sm {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-sm:hover { color: var(--text); border-color: #6e7681; background: var(--bg); }
+
+  .btn-sm.primary-sm {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .btn-sm.primary-sm:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+
+  /* Requirements */
+  .req-list {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .req-tag {
+    font-size: 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+  }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 100;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.25s;
+    max-width: 280px;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.error { border-left: 3px solid var(--red); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Portal tabs */
+  .portal-tabs { display: flex; gap: 4px; }
+  .portal-tab {
+    flex: 1;
+    padding: 7px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text-muted);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .portal-tab:hover { border-color: #6e7681; color: var(--text); }
+  .portal-tab.active.linkedin { background: #0d2038; color: #58a6ff; border-color: #0a66c2; }
+  .portal-tab.active.gupy { background: #1e0d2e; color: var(--purple); border-color: #7b2d8b; }
+  .portal-tab.active.glassdoor { background: #0d2119; color: var(--green); border-color: #0caa41; }
+
+  /* Collapsible */
+  .collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+  }
+  .collapsible-arrow {
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: transform 0.2s;
+  }
+  .collapsible-header.open .collapsible-arrow { transform: rotate(180deg); }
+  .collapsible-body { display: none; padding-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .collapsible-body.hidden { display: none; }
+
+  /* Range */
+  .range-row { display: flex; align-items: center; gap: 8px; }
+  .range-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .range-val { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); min-width: 28px; text-align: right; }
+
+  /* Job detail panel (expandable) */
+  .job-detail {
+    display: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .job-detail.open { display: block; }
+  .job-card.expanded { border-radius: var(--radius-lg) var(--radius-lg) 0 0; border-bottom-color: transparent; }
+
+  .section-header-run {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+  }
+  .run-info { font-size: 12px; color: var(--text-muted); }
+
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; grid-template-areas: "header" "main" "sidebar"; }
+    .sidebar { border-right: none; border-top: 1px solid var(--border); }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">🔍</div>
+      RaxyJobFinder
+    </div>
+    <span class="header-badge">v1.0</span>
+    <div style="height:20px;width:1px;background:var(--border);margin:0 4px;"></div>
+    <span style="font-size:12px;color:var(--text-dim);">Buscador multicanal de vagas</span>
+    <div class="header-right">
+      <button class="btn-ghost" onclick="exportResults()">⬇ Exportar JSON</button>
+      <button class="btn-primary" id="runBtn" onclick="runSearch()">
+        <span id="runBtnIcon">▶</span>
+        <span id="runBtnText">Buscar vagas</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sidebar: form -->
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- Portal -->
+      <div class="section">
+        <div class="section-title">Portal</div>
+        <div class="portal-tabs">
+          <button class="portal-tab active linkedin" onclick="setPortal('linkedin', this)">LinkedIn</button>
+          <button class="portal-tab" onclick="setPortal('gupy', this)">Gupy</button>
+          <button class="portal-tab" onclick="setPortal('glassdoor', this)">Glassdoor</button>
+        </div>
+        <div class="field" id="gdCookieField" style="display:none;">
+          <label>Cookie do Glassdoor</label>
+          <input type="text" id="gdCookie" placeholder="session_id=abc123; ..." />
+        </div>
+      </div>
+
+      <!-- Busca básica -->
+      <div class="section">
+        <div class="section-title">Busca</div>
+        <div class="field">
+          <label>Palavra-chave</label>
+          <input type="text" id="keywords" placeholder="Python, Desenvolvedor Java..." value="PHP" oninput="updateCmd()" />
+        </div>
+        <div class="field">
+          <label>Localização</label>
+          <input type="text" id="location" placeholder="São Paulo, Brasil..." value="São Paulo" oninput="updateCmd()" />
+        </div>
+      </div>
+
+      <!-- LinkedIn exclusivo -->
+      <div class="section" id="linkedinOptions">
+        <div class="section-title">Opções LinkedIn</div>
+        <div class="field">
+          <label>Modalidade de trabalho</label>
+          <select id="workType" onchange="updateCmd()">
+            <option value="normal">Todas</option>
+            <option value="remote">Remoto</option>
+            <option value="hybrid">Híbrido</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Período de publicação</label>
+          <select id="recentPeriod" onchange="updateCmd()">
+            <option value="any">Qualquer período</option>
+            <option value="day">Últimas 24h</option>
+            <option value="week">Última semana</option>
+            <option value="month">Último mês</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <span class="toggle-label">Menos de 10 candidatos</span>
+          <label class="toggle">
+            <input type="checkbox" id="under10" onchange="updateCmd()" />
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Filtros de vagas -->
+      <div class="section">
+        <div class="collapsible-header open" onclick="toggleSection(this)">
+          <div class="section-title" style="border:none;padding:0;">Filtros de vagas</div>
+          <span class="collapsible-arrow">▼</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="field">
+            <label>Arquivo de filtro (.json)</label>
+            <input type="text" id="filterFile" placeholder="filters/python.json" oninput="updateCmd()" />
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label">Filtrar keyword no título</span>
+            <label class="toggle">
+              <input type="checkbox" id="filterByKw" onchange="updateCmd()" />
+              <span class="toggle-track"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paginação e limites -->
+      <div class="section">
+        <div class="collapsible-header open" onclick="toggleSection(this)">
+          <div class="section-title" style="border:none;padding:0;">Paginação</div>
+          <span class="collapsible-arrow">▼</span>
+        </div>
+        <div class="collapsible-body">
+          <div class="grid-2">
+            <div class="field">
+              <label>Máx. vagas</label>
+              <input type="number" id="maxJobs" value="0" min="0" oninput="updateCmd()" />
+            </div>
+            <div class="field">
+              <label>Offset inicial</label>
+              <input type="number" id="startOffset" value="0" min="0" oninput="updateCmd()" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Detalhes: máx. <span id="detailsLimitVal">20</span></label>
+            <div class="range-row">
+              <input type="range" min="0" max="100" step="1" value="20" id="detailsLimit"
+                oninput="document.getElementById('detailsLimitVal').textContent=this.value;updateCmd()" />
+              <span class="range-val" id="dlOut">20</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proxy -->
+      <div class="section">
+        <div class="collapsible-header" onclick="toggleSection(this)">
+          <div class="section-title" style="border:none;padding:0;">Proxy</div>
+          <span class="collapsible-arrow">▼</span>
+        </div>
+        <div class="collapsible-body hidden">
+          <div class="field">
+            <label>Provedor de proxies</label>
+            <select id="proxyProvider" onchange="updateCmd()">
+              <option value="united-states">United States (padrão)</option>
+              <option value="brazil">Brazil</option>
+              <option value="canada">Canada</option>
+              <option value="germany">Germany</option>
+              <option value="netherlands">Netherlands</option>
+              <option value="all">All (40+ países)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Fonte de proxy manual</label>
+            <input type="text" id="proxySource" placeholder="https://..." oninput="updateCmd()" />
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Pool de bridges</label>
+              <input type="number" id="validCount" value="25" min="1" oninput="updateCmd()" />
+            </div>
+            <div class="field">
+              <label>Vagas por proxy</label>
+              <input type="number" id="jobsPerProxy" value="5" min="1" oninput="updateCmd()" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label>Timeout proxy (s)</label>
+              <input type="number" id="timeout" value="12" min="1" oninput="updateCmd()" />
+            </div>
+            <div class="field">
+              <label>Timeout detalhe (s)</label>
+              <input type="number" id="detailTimeout" value="15" min="1" oninput="updateCmd()" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threads -->
+      <div class="section">
+        <div class="collapsible-header" onclick="toggleSection(this)">
+          <div class="section-title" style="border:none;padding:0;">Performance</div>
+          <span class="collapsible-arrow">▼</span>
+        </div>
+        <div class="collapsible-body hidden">
+          <div class="field">
+            <label>Threads proxy: <span id="threadsVal">8</span></label>
+            <div class="range-row">
+              <input type="range" min="1" max="32" step="1" value="8" id="threads"
+                oninput="document.getElementById('threadsVal').textContent=this.value;updateCmd()" />
+              <span class="range-val">8</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Threads detalhe: <span id="detailThreadsVal">5</span></label>
+            <div class="range-row">
+              <input type="range" min="1" max="20" step="1" value="5" id="detailThreads"
+                oninput="document.getElementById('detailThreadsVal').textContent=this.value;updateCmd()" />
+              <span class="range-val">5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Main area -->
+  <main class="main">
+    <!-- Command bar -->
+    <div class="cmd-bar">
+      <span class="cmd-label">CLI</span>
+      <div class="cmd-code" id="cmdPreview">python buscador_vagas/buscador.py --keywords "PHP" --location "São Paulo"</div>
+      <button class="btn-copy" id="copyBtn" onclick="copyCmd()">⎘ Copiar</button>
+    </div>
+
+    <!-- Loading bar -->
+    <div class="loading-bar" id="loadingBar">
+      <div class="loading-status" id="loadingStatus">
+        Testando proxies<span class="loading-dot">...</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- Run info bar (shown when results present) -->
+    <div class="section-header-run" id="runInfo" style="display:none;">
+      <span class="run-info" id="runInfoText">0 vagas encontradas</span>
+      <div class="filters-bar" id="filtersBar">
+        <button class="filter-chip active" onclick="filterResults('all', this)">Todas</button>
+        <button class="filter-chip" onclick="filterResults('remoto', this)">🟢 Remoto</button>
+        <button class="filter-chip" onclick="filterResults('híbrido', this)">🟡 Híbrido</button>
+        <button class="filter-chip" onclick="filterResults('presencial', this)">⚪ Presencial</button>
+        <button class="filter-chip" id="dateFilterToggle" onclick="toggleDateFilter()">📅 Data</button>
+      </div>
+    </div>
+
+    <!-- Date range filter -->
+    <div class="date-filter-group" id="dateFilterGroup">
+      <span class="date-filter-label">📅 Publicação</span>
+      <label style="font-size:11px;color:var(--text-muted)">De</label>
+      <input type="date" class="date-filter-input" id="dateFrom" onchange="applyDateFilter()" />
+      <span class="date-filter-sep">→</span>
+      <label style="font-size:11px;color:var(--text-muted)">Até</label>
+      <input type="date" class="date-filter-input" id="dateTo" onchange="applyDateFilter()" />
+      <button class="btn-date-clear" onclick="clearDateFilter()">✕ Limpar</button>
+      <span class="date-filter-count" id="dateFilterCount"></span>
+    </div>
+
+    <!-- Results -->
+    <div class="results-area" id="resultsArea">
+
+      <!-- Stats cards -->
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+          <div class="stat-num" id="statTotal">0</div>
+          <div class="stat-label">Total de vagas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statRemote" style="color:var(--green)">0</div>
+          <div class="stat-label">Remoto</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statHybrid" style="color:var(--amber)">0</div>
+          <div class="stat-label">Híbrido</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statDetails" style="color:var(--purple)">0</div>
+          <div class="stat-label">Com detalhes</div>
+        </div>
+      </div>
+
+      <!-- Job list -->
+      <div id="jobList"></div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🔍</div>
+        <h3>Pronto para buscar</h3>
+        <p>Configure os parâmetros ao lado e clique em <strong>Buscar vagas</strong>.<br>Os resultados aparecerão aqui.</p>
+      </div>
+
+    </div>
+  </main>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  /* ─── Config ─────────────────────────────────────────────────── */
+  const API_BASE = 'http://localhost:8000';   // ajuste se a API rodar em outra porta/host
+
+  /* ─── Estado ─────────────────────────────────────────────────── */
+  let currentPortal = 'linkedin';
+  let allJobs       = [];
+  let activeFilter  = 'all';
+  let isRunning     = false;
+  let currentSSE    = null;   // EventSource ativo
+
+  /* ─── Sidebar helpers ────────────────────────────────────────── */
+  function setPortal(p, tab) {
+    currentPortal = p;
+    document.querySelectorAll('.portal-tab').forEach(t => t.className = 'portal-tab');
+    tab.className = `portal-tab active ${p}`;
+    document.getElementById('linkedinOptions').style.display = (p === 'linkedin') ? '' : 'none';
+    document.getElementById('gdCookieField').style.display  = (p === 'glassdoor') ? '' : 'none';
+    updateCmd();
+  }
+
+  function toggleSection(header) {
+    header.classList.toggle('open');
+    header.nextElementSibling.classList.toggle('hidden');
+  }
+
+  const val     = id => document.getElementById(id).value.trim();
+  const checked = id => document.getElementById(id).checked;
+
+  /* ─── Preview CLI ────────────────────────────────────────────── */
+  function updateCmd() {
+    const parts = ['python buscador_vagas/buscador.py'];
+    if (currentPortal !== 'linkedin') parts.push(`--portal ${currentPortal}`);
+    const kw = val('keywords'); if (kw) parts.push(`--keywords "${kw}"`);
+    const loc = val('location'); if (loc) parts.push(`--location "${loc}"`);
+    if (currentPortal === 'linkedin') {
+      const wt = val('workType'); if (wt && wt !== 'normal') parts.push(`--work-type ${wt}`);
+      const rp = val('recentPeriod'); if (rp && rp !== 'any') parts.push(`--recent-period ${rp}`);
+      if (checked('under10')) parts.push('--under-10-applicants');
+    }
+    if (currentPortal === 'glassdoor') {
+      const c = val('gdCookie'); if (c) parts.push(`--gd-cookie "${c.substring(0,20)}..."`);
+    }
+    const ff = val('filterFile'); if (ff) parts.push(`--filters ${ff}`);
+    if (checked('filterByKw')) parts.push('--filter-by-keywords');
+    const mj = parseInt(val('maxJobs')); if (mj > 0) parts.push(`--max-jobs ${mj}`);
+    const st = parseInt(val('startOffset')); if (st > 0) parts.push(`--start ${st}`);
+    const dl = document.getElementById('detailsLimit').value;
+    if (parseInt(dl) !== 20) parts.push(`--details-limit ${dl}`);
+    const pp = val('proxyProvider'); if (pp && pp !== 'united-states') parts.push(`--provider ${pp}`);
+    const ps = val('proxySource'); if (ps) parts.push(`--proxy-source "${ps}"`);
+    const vc = val('validCount'); if (vc && parseInt(vc) !== 25) parts.push(`--valid-count ${vc}`);
+    const jp = val('jobsPerProxy'); if (jp && parseInt(jp) !== 5) parts.push(`--jobs-per-proxy ${jp}`);
+    const to = val('timeout'); if (to && parseInt(to) !== 12) parts.push(`--timeout ${to}`);
+    const dto = val('detailTimeout'); if (dto && parseInt(dto) !== 15) parts.push(`--detail-timeout ${dto}`);
+    const thr = document.getElementById('threads').value;
+    if (parseInt(thr) !== 8) parts.push(`--threads ${thr}`);
+    const dthr = document.getElementById('detailThreads').value;
+    if (parseInt(dthr) !== 5) parts.push(`--detail-threads ${dthr}`);
+    document.getElementById('cmdPreview').textContent = parts.join(' ');
+  }
+
+  function copyCmd() {
+    navigator.clipboard.writeText(document.getElementById('cmdPreview').textContent).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copiado'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '⎘ Copiar'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  /* ─── Monta payload para a API ───────────────────────────────── */
+  function buildPayload() {
+    return {
+      portal:               currentPortal,
+      keywords:             val('keywords')  || 'Vagas',
+      location:             val('location')  || 'Brasil',
+      work_type:            val('workType')  || 'normal',
+      recent_period:        val('recentPeriod') || 'any',
+      under_10_applicants:  checked('under10'),
+      filter_by_keywords:   checked('filterByKw'),
+      proxy_provider:       val('proxyProvider') || 'united-states',
+      valid_count:          parseInt(val('validCount'))     || 25,
+      jobs_per_proxy:       parseInt(val('jobsPerProxy'))   || 5,
+      threads:              parseInt(document.getElementById('threads').value) || 8,
+      detail_threads:       parseInt(document.getElementById('detailThreads').value) || 5,
+      timeout:              parseFloat(val('timeout'))      || 12,
+      detail_timeout:       parseFloat(val('detailTimeout'))|| 15,
+      max_jobs:             parseInt(val('maxJobs'))        || 0,
+      start:                parseInt(val('startOffset'))    || 0,
+      details_limit:        parseInt(document.getElementById('detailsLimit').value) || 20,
+      gd_cookie:            val('gdCookie') || '',
+    };
+  }
+
+  /* ─── Log de eventos (painel de status) ─────────────────────── */
+  function appendLog(text, level = 'info') {
+    const el = document.getElementById('loadingStatus');
+    const colors = { info: 'var(--text-muted)', warn: 'var(--amber)', error: 'var(--red)', ok: 'var(--green)' };
+    el.innerHTML = `<span style="color:${colors[level] || colors.info}">${text}</span><span class="loading-dot">…</span>`;
+  }
+
+  /* ─── Busca via SSE ──────────────────────────────────────────── */
+  async function runSearch() {
+    if (isRunning) { abortSearch(); return; }
+
+    // Verifica se a API está no ar
+    try {
+      const ping = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+      if (!ping.ok) throw new Error();
+    } catch {
+      showToast(`Não foi possível conectar em ${API_BASE}. Suba a API primeiro.`, 'error');
+      return;
+    }
+
+    isRunning = true;
+    setRunBtn(true);
+    resetUI();
+
+    const payload = buildPayload();
+
+    // POST /search/stream → recebe SSE
+    // A API aceita o body JSON e devolve text/event-stream.
+    // Como EventSource não suporta POST nativamente,
+    // usamos fetch com ReadableStream para consumir o SSE manualmente.
+    try {
+      const resp = await fetch(`${API_BASE}/search/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+        throw new Error(err.detail || resp.statusText);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      // Guarda o reader para poder abortar
+      currentSSE = reader;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE: blocos separados por \n\n
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop(); // último bloco pode estar incompleto
+
+        for (const block of blocks) {
+          if (!block.trim()) continue;
+          let eventName = 'message';
+          let dataStr   = '';
+          for (const line of block.split('\n')) {
+            if (line.startsWith('event: ')) eventName = line.slice(7).trim();
+            if (line.startsWith('data: '))  dataStr   = line.slice(6).trim();
+          }
+          handleSSEEvent(eventName, dataStr);
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        showToast(`Erro: ${err.message}`, 'error');
+        appendLog(`Erro: ${err.message}`, 'error');
+      }
+    } finally {
+      finishSearch();
+    }
+  }
+
+  function abortSearch() {
+    if (currentSSE) { currentSSE.cancel(); currentSSE = null; }
+    finishSearch();
+    showToast('Busca cancelada.', 'error');
+  }
+
+  function handleSSEEvent(event, dataStr) {
+    let data = {};
+    try { data = JSON.parse(dataStr); } catch { return; }
+
+    switch (event) {
+      case 'connected':
+        appendLog('Conectado à API — iniciando busca', 'info');
+        break;
+
+      case 'event': {
+        // Evento do Raxy: {name, message, level}
+        const lvl = (data.level || 'info').toLowerCase();
+        const apiLevel = lvl.includes('error') ? 'error' : lvl.includes('warn') ? 'warn' : 'info';
+        appendLog(data.message || data.name || 'evento', apiLevel);
+        break;
+      }
+
+      case 'vagas':
+        // Evento vagas:disponiveis — pode renderizar parcialmente
+        if (Array.isArray(data.vagas) && data.vagas.length) {
+          allJobs = data.vagas;
+          renderResults(allJobs);
+        }
+        break;
+
+      case 'done':
+        allJobs = data.jobs || [];
+        renderResults(allJobs);
+        showToast(`${allJobs.length} vagas encontradas!`, 'success');
+        break;
+
+      case 'error':
+        appendLog(`Erro na busca: ${data.message}`, 'error');
+        showToast(`Erro: ${data.message}`, 'error');
+        break;
+
+      case 'cancelled':
+        appendLog('Busca cancelada.', 'warn');
+        break;
+    }
+  }
+
+  function resetUI() {
+    document.getElementById('loadingBar').classList.add('active');
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('statsRow').classList.remove('visible');
+    document.getElementById('jobList').innerHTML = '';
+    document.getElementById('runInfo').style.display = 'none';
+    document.getElementById('dateFilterGroup').classList.remove('visible');
+    document.getElementById('dateFilterToggle').classList.remove('active');
+    clearDateFilter();
+    activeFilter = 'all';
+    appendLog('Conectando à API', 'info');
+  }
+
+  function finishSearch() {
+    isRunning = false;
+    currentSSE = null;
+    setRunBtn(false);
+    document.getElementById('loadingBar').classList.remove('active');
+  }
+
+  function setRunBtn(running) {
+    const btn  = document.getElementById('runBtn');
+    const icon = document.getElementById('runBtnIcon');
+    const text = document.getElementById('runBtnText');
+    btn.disabled = false; // nunca desabilita — clique cancela
+    if (running) {
+      icon.textContent = '⏹';
+      text.textContent = 'Cancelar';
+      btn.style.background = '#4a1515';
+      btn.style.borderColor = '#f85149';
+    } else {
+      icon.textContent = '▶';
+      text.textContent = 'Buscar vagas';
+      btn.style.background = '';
+      btn.style.borderColor = '';
+    }
+  }
+
+  /* ─── Renderização de resultados ────────────────────────────── */
+  function renderResults(jobs) {
+    const list = document.getElementById('jobList');
+    list.innerHTML = '';
+
+    const remote      = jobs.filter(j => j.modalidade === 'remoto').length;
+    const hybrid      = jobs.filter(j => j.modalidade === 'híbrido').length;
+    const withDetails = jobs.filter(j => j.description).length;
+
+    document.getElementById('statTotal').textContent   = jobs.length;
+    document.getElementById('statRemote').textContent  = remote;
+    document.getElementById('statHybrid').textContent  = hybrid;
+    document.getElementById('statDetails').textContent = withDetails;
+    document.getElementById('statsRow').classList.add('visible');
+
+    document.getElementById('runInfo').style.display = '';
+    document.getElementById('filtersBar').classList.add('visible');
+    document.getElementById('runInfoText').textContent = `${jobs.length} vagas encontradas`;
+
+    if (jobs.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">😕</div><h3>Nenhuma vaga encontrada</h3><p>Tente ajustar os filtros ou a palavra-chave.</p></div>`;
+      return;
+    }
+
+    const badgeMap = { remoto: 'badge-remoto', 'híbrido': 'badge-hibrido', presencial: 'badge-presencial' };
+    const labelMap = { remoto: '● Remoto', 'híbrido': '◐ Híbrido', presencial: '○ Presencial' };
+
+    jobs.forEach((job, i) => {
+      const portal   = (job.provider || job.portal || currentPortal).toLowerCase();
+      const criteria = job.criteria || {};
+      const reqs     = (criteria.requisitos || []).slice(0, 6).map(r => `<span class="req-tag">${r}</span>`).join('');
+      const url      = job.url || job.detail_url || '#';
+      const modal    = job.modalidade || 'presencial';
+
+      const card = document.createElement('div');
+      card.className = `job-card ${portal}`;
+      card.innerHTML = `
+        <div class="job-header">
+          <div>
+            <div class="job-title">${esc(job.title || job.detail_title || '—')}</div>
+            <div class="job-company">${esc(job.company || job.detail_company || '—')}</div>
+          </div>
+          <span class="badge badge-portal badge-${portal}">${portal}</span>
+        </div>
+        <div class="job-meta">
+          <span class="meta-item">📍 ${esc(job.location || job.detail_location || '—')}</span>
+          <span class="meta-item">🕐 ${esc(job.listed_text || '—')}</span>
+          ${job.detail_applicants_text ? `<span class="meta-item">👤 ${esc(job.detail_applicants_text)}</span>` : ''}
+          <span class="badge ${badgeMap[modal] || 'badge-presencial'}">${labelMap[modal] || '○ Presencial'}</span>
+        </div>
+        ${reqs ? `<div class="req-list">${reqs}</div>` : ''}
+        <div class="job-actions">
+          <button class="btn-sm primary-sm" onclick="toggleDetail(${i},this);event.stopPropagation()">↕ Ver detalhes</button>
+          <button class="btn-sm" onclick="openLink('${url}');event.stopPropagation()">↗ Abrir vaga</button>
+          ${criteria.Tipo ? `<span class="btn-sm" style="cursor:default;border:none;padding-left:0;color:var(--text-dim)">${esc(criteria.Tipo)}</span>` : ''}
+        </div>`;
+      list.appendChild(card);
+
+      const detail = document.createElement('div');
+      detail.className = 'job-detail';
+      detail.id = `detail-${i}`;
+      const critEntries = Object.entries(criteria)
+        .filter(([k]) => k !== 'requisitos')
+        .map(([k, v]) => `<div style="font-size:12px;margin-top:4px"><span style="color:var(--text-dim)">${esc(k)}:</span> <span style="color:var(--text-muted)">${esc(String(v))}</span></div>`)
+        .join('');
+      detail.innerHTML = `<p style="margin-bottom:8px">${esc(job.description || 'Sem descrição disponível.')}</p>${critEntries}`;
+      list.appendChild(detail);
+    });
+  }
+
+  function esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function toggleDetail(i, btn) {
+    const detail = document.getElementById(`detail-${i}`);
+    const card   = btn.closest('.job-card');
+    const isOpen = detail.classList.contains('open');
+    detail.classList.toggle('open', !isOpen);
+    card.classList.toggle('expanded', !isOpen);
+    btn.textContent = isOpen ? '↕ Ver detalhes' : '↑ Ocultar';
+  }
+
+  /* ─── Filtros client-side ────────────────────────────────────── */
+  let dateFilterFrom = null;
+  let dateFilterTo   = null;
+
+  function filterResults(mode, chip) {
+    activeFilter = mode;
+    document.querySelectorAll('.filter-chip').forEach(c => {
+      if (c.id !== 'dateFilterToggle') c.classList.remove('active');
+    });
+    chip.classList.add('active');
+    renderResults(getFilteredJobs());
+  }
+
+  function getFilteredJobs() {
+    let jobs = allJobs;
+
+    // Modalidade filter
+    if (activeFilter !== 'all') {
+      jobs = jobs.filter(j => j.modalidade === activeFilter);
+    }
+
+    // Date filter
+    if (dateFilterFrom || dateFilterTo) {
+      jobs = jobs.filter(j => {
+        const ts = j.listed_at;
+        if (!ts || typeof ts === 'string') return false; // no date data
+        const jobDate = new Date(ts * 1000);
+        jobDate.setHours(0, 0, 0, 0);
+        if (dateFilterFrom && jobDate < dateFilterFrom) return false;
+        if (dateFilterTo) {
+          const toEnd = new Date(dateFilterTo);
+          toEnd.setHours(23, 59, 59, 999);
+          if (jobDate > toEnd) return false;
+        }
+        return true;
+      });
+    }
+
+    return jobs;
+  }
+
+  function toggleDateFilter() {
+    const group  = document.getElementById('dateFilterGroup');
+    const toggle = document.getElementById('dateFilterToggle');
+    const isOpen = group.classList.contains('visible');
+    group.classList.toggle('visible', !isOpen);
+    toggle.classList.toggle('active', !isOpen);
+  }
+
+  function applyDateFilter() {
+    const fromVal = document.getElementById('dateFrom').value;
+    const toVal   = document.getElementById('dateTo').value;
+
+    dateFilterFrom = fromVal ? new Date(fromVal + 'T00:00:00') : null;
+    dateFilterTo   = toVal   ? new Date(toVal   + 'T00:00:00') : null;
+
+    const filtered = getFilteredJobs();
+    renderResults(filtered);
+
+    // Update count badge
+    const countEl = document.getElementById('dateFilterCount');
+    if (dateFilterFrom || dateFilterTo) {
+      countEl.textContent = `${filtered.length} de ${allJobs.length}`;
+    } else {
+      countEl.textContent = '';
+    }
+  }
+
+  function clearDateFilter() {
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value   = '';
+    dateFilterFrom = null;
+    dateFilterTo   = null;
+    document.getElementById('dateFilterCount').textContent = '';
+    renderResults(getFilteredJobs());
+  }
+
+  /* ─── Exportar JSON ──────────────────────────────────────────── */
+  function exportResults() {
+    if (!allJobs.length) { showToast('Nenhuma vaga para exportar.', 'error'); return; }
+    const blob = new Blob([JSON.stringify(allJobs, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `vagas_${currentPortal}_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Arquivo exportado!', 'success');
+  }
+
+  function openLink(url) { if (url && url !== '#') window.open(url, '_blank'); }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  /* ─── Init ───────────────────────────────────────────────────── */
+  updateCmd();
+</script>
+</body>
+</html>
